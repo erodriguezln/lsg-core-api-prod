@@ -6,12 +6,13 @@ services:
     container_name: lsg_db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpwd
-      MYSQL_DATABASE: db_lsg
-      MYSQL_USER: lsg_user
-      MYSQL_PASSWORD: lsg_password
-    ports:
-      - "3307:3306"          # puerto host 3307 → contenedor 3306
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    # En DIINF NO exponemos el puerto de MySQL hacia fuera
+    # ports:
+    #   - "${DB_HOST_PORT:-3307}:3306"
     volumes:
       - db_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
@@ -28,29 +29,29 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 3306
-      DB_NAME: db_lsg
-      DB_USER: lsg_user
-      DB_PASSWORD: lsg_password
-      APP_ENV: local
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      APP_ENV: prod
       API_VERSION: "1.1.0"
-      GIT_COMMIT: "dev-local"
+      GIT_COMMIT: "diinf-deploy"
 
-      # para desarrollo local
-      AUTH_DISABLED: "true"
+      # Seguridad (integrado con LSG-auth)
+      AUTH_DISABLED: "false"
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      AUTH_JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE}
 
-      # para producción DIINF
-      #AUTH_DISABLED: "false"
-      #AUTH_JWT_SECRET: "el-mismo-secret-que-lsg-auth"
-      #AUTH_JWT_ALGORITHM: "HS256"
-      #AUTH_JWT_ISSUER: "lsg-auth"
-      #AUTH_JWT_AUDIENCE: "lsg-core-api"
-
-    volumes:
-      - .:/app
+    # En prod no montamos el código del host como volumen
+    # (evitamos cambios accidentales en caliente)
+    # volumes:
+    #   - .:/app
     working_dir: /app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8012}:8000"
 
 volumes:
   db_data:

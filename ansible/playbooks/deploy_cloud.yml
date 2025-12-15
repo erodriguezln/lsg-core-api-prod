@@ -1,0 +1,211 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN LA NUBE
+# Descripción: Configura una instancia en la nube (con GitHub Actions) para desplegar la aplicación
+# =====================================
+
+- name: Despliegue en la nube 
+  hosts: all
+  become: true
+  
+  vars:
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Nombre del proyecto
+    project_name: "app"
+    
+    # Usuario remoto (pasado desde el workflow)
+    remote_user: "{{ remote_user | default('root') }}"
+  
+    # Directorio raíz del proyecto (se ajusta automáticamente según el usuario)
+    project_root: "{{ '/home/' + remote_user if remote_user != 'root' else '/root' }}/{{ project_name }}"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
+    clone_repos: false
+
+    # Variables para localizar archivos
+    workspace_root: "{{ workspace_root }}"
+    deployment_dir: "{{ deployment_dir }}"
+
+    # Determina si el proyecto utiliza un archivo .env para el docker compose (modificar según tu caso)
+    use_env_file: true
+    
+    # Directorio local donde están los archivos a copiar (docker-compose.yml y otros archivos adicionales)
+    local_files_dir: "{{ workspace_root }}/{{ deployment_dir }}"
+    
+    # Archivos adicionales a copiar (opcional)
+    additional_files:
+      - "init.sql"
+    
+    # CONFIGURACIÓN DE SERVICIOS
+    # --------------------------
+    # Prefijo común para las imágenes Docker
+    docker_registry: ""
+    
+    # Definición de servicios
+    services:
+      - name: "core"                     # Nombre interno del servicio
+        type: "api"                      # Tipo: api o frontend
+        image: "thecariah/api-core-test" # Imagen Docker (solo cuando clone_repos = false)
+        tag: "latest"                    # Tag de la imagen (solo cuando clone_repos = false)
+        port: 3001                       # Puerto en el host
+        env_var: "API_CORE_IMAGE"        # Nombre de variable para el .env (solo cuando clone_repos = false)
+        api_prefix: "api-core"           # Prefijo para la ruta de API en Nginx
+      
+      - name: "gm"
+        type: "api"
+        image: "thecariah/api-gm-test"
+        tag: "latest"
+        port: 3002
+        env_var: "API_GM_IMAGE"
+        api_prefix: "api-gm"
+      
+      - name: "client"
+        type: "frontend"
+        image: "thecariah/client-test"
+        tag: "latest"
+        port: 3000
+        env_var: "CLIENT_IMAGE"
+        frontend_prefix: "/"
+
+    # Repositorios a clonar (solo necesario cuando clone_repos: true)
+    service_repos:
+      - name: "api-core"
+        url: "https://github.com/infra-sandbox/api-core-test.git"
+        branch: "main"
+        env_var: "API_CORE_PATH"
+        service: "core"  # Debe coincidir con un servicio en la sección 'services'
+      
+      - name: "api-gm"
+        url: "https://github.com/infra-sandbox/api-gm-test.git"
+        branch: "main"
+        env_var: "API_GM_PATH"
+        service: "gm"
+      
+      - name: "client"
+        url: "https://github.com/infra-sandbox/client-test.git"
+        branch: "main"
+        env_var: "CLIENT_PATH"
+        service: "client"
+      
+      # Para añadir un nuevo repositorio, agrega un bloque similar al siguiente:
+      # - name: "nuevo_servicio"
+      #   url: "https://github.com/usuario/nuevo-servicio.git"
+      #   branch: "main"
+      #   env_var: "NUEVO_SERVICIO_PATH"
+      #   service: "nuevo_servicio"
+
+    # Variables globales de entorno (inyectadas desde GitHub Secrets o hardcodeadas) (modifica a tu conveniencia)
+    global_env_vars:
+      POSTGRES_DB: "{{ postgres_db }}"
+      POSTGRES_USER: "{{ postgres_user }}"
+      POSTGRES_PASSWORD: "{{ postgres_password }}"
+      MONGO_USERNAME: "{{ mongo_username }}"
+      MONGO_PASSWORD: "{{ mongo_password }}"
+      INIT_SQL_PATH: "{{ project_root }}/init.sql"
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------    
+    # Nombre del servidor (dominio o "_" para local)
+    server_name: "_"
+
+    # Controla si las rutas definidas en Nginx deben terminar con una barra "/".
+    # true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
+    # false ➝ Nginx no agregará "/" al final (ej: proxy_pass http://localhost:3000).
+    # Recomendación: Si los servicios no se comunican bien entre sí, o los assets no cargan, prueba cambiar este valor.
+    use_trailing_slash: true
+    
+    # Para SSL (enable_ssl: true -> con dominio, enable_ssl: false -> sin dominio)
+    enable_ssl: false
+    # admin_email: "carolina.antillanca@usach.cl"
+    # ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    # ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+    
+  roles:
+    - python
+    - docker
+    - { role: ssl, when: "enable_ssl | bool" }
+    - nginx
+    - provision
+
+# INSTRUCCIONES:
+# 0. REQUISITOS:
+#   - Cuenta de GitHub con acceso a GitHub Actions
+#   - Cuenta en algún proveedor cloud compatible (AWS o DigitalOcean)
+#   - Tener secretos de GitHub Actions configurados según el proveedor cloud y para las variables de entorno.
+#
+# 1. MODO DE DESPLIEGUE:
+#    El playbook soporta dos modos de despliegue controlados por la variable 'clone_repos':
+#
+#    a) clone_repos: false (RECOMENDADO)
+#       - Usa imágenes Docker preconstruidas
+#       - Requiere que TODOS los servicios tengan 'image' y 'tag' definidos
+#       - NO requiere configurar 'service_repos'
+#       - Más rápido y más estable para producción
+#
+#    b) clone_repos: true
+#       - Clona los repositorios y construye las imágenes en la instancia
+#       - NO definir 'image' ni 'tag' en los servicios
+#       - REQUIERE configurar 'service_repos' con los links de los repositorios
+#
+# 2. DEFINE SI USAS UN ARCHIVO .ENV PARA EL DOCKER COMPOSE:
+#    - Si tu proyecto usa un archivo .env, asegúrate de que 'use_env_file' esté en true.
+#      Recuerda crear el archivo .env de forma manual y previo a la ejecución del playbook.
+#
+#    - Si no usas .env, pon 'use_env_file' en false.
+#
+# 3. AÑADIR SERVICIOS:
+#    Agrega bloques como este dentro de services y modifica sus valores:
+#
+#   services:
+#    - name: "nuevo-servicio"          # Nombre único del servicio
+#      type: "api"                     # Tipo: api o frontend
+#      image: "usuario/nueva-imagen"   # Imagen Docker (solo si clone_repos: false)
+#      tag: "latest"                   # Tag de la imagen (solo si clone_repos: false)
+#      port: 3003                      # Puerto en el host
+#      env_var: "NUEVO_SERVICIO_IMAGE" # Nombre de variable para el .env (solo si clone_repos: false)
+#      api_prefix: "nuevo-api"         # Ruta de API en Nginx (solo si es tipo api)
+#
+#      IMPORTANTE: Para agregar el frontend debes cambiar el tipo a "frontend" y agregar frontend_prefix. 
+#                  Si tienes más de un frontend, debes definir un prefijo único para cada uno.
+#
+#    Para cuando clone_repos = true, también debes definir service_repos:
+#
+#    service_repos:
+#    - name: "nuevo-servicio"                     # Nombre de la carpeta donde se clonará
+#      url: "https://github.com/tu-org/app.git"   # URL del repositorio
+#      branch: "main"                             # Rama a clonar
+#      env_var: "NUEVO_SERVICIO_PATH"             # Nombre de variable para el .env
+#      service: "nuevo_servicio"                  # Debe coincidir con el 'name' en la sección 'services'
+#
+# 4. VARIABLES DE ENTORNO (se inyectarán en el archivo .env):
+#    - Específicas de un servicio: Añádelas dentro de env_var en el service o service_repos (dependiendo del modo de despliegue)
+#    - Globales para todos: Añádelas en global_env_vars (harcodeadas o inyectadas desde GitHub Secrets)
+#
+# 5. ARCHIVOS A COPIAR:
+#    - Puedes añadir archivos adicionales a copiar al servidor en la sección additional_files.
+#    - Los archivos se copiarán desde el repositorio donde se ejecute el workflow al directorio raíz del proyecto en el servidor.
+#    - Si no necesitas archivos adicionales, puedes dejar sin definir esta variable o dejarla vacía.
+#
+# 6. CONFIGURACIÓN DEL DOMINIO Y SSL:
+#    a) Para usar un dominio personalizado, modifica las siguientes variables:
+#       - server_name: Dominio de tu servidor (ej: "felucia.diinf.usach.cl")
+#       - enable_ssl: true (para habilitar HTTPS)
+#       - admin_email: Tu email para certificados SSL
+#
+#    b) Si no usas dominio, deja server_name como "_" y enable_ssl como false.
+#
+# 7. CONFIGURACIÓN RUTA DE NGINX:
+#    Controla si las rutas definidas en Nginx deben terminar con una barra "/".
+#     - use_trailing_slash: true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
+#     - use_trailing_slash: false ➝ Nginx no agregará "/" al final (ej: proxy_pass http://localhost:3000).
+#
+#     Si no defines este valor, se usará true por defecto.
+#
+#     IMPORTANTE: Si los servicios no se comunican bien entre sí, prueba cambiar este valor.
+#
+# NOTA:
+# Este playbook está diseñado para ejecutarse en conjunto con el workflow de GitHub Actions y Terraform.
+#
+# PARA MAS INFORMACIÓN, INGRESA A LA GUÍA DE USO: 
+# https://infra-sandbox.gitbook.io/deployment-kit-docs

@@ -1,0 +1,217 @@
+---
+# =====================================
+# PLAYBOOK: DESPLIEGUE EN VM DIINF o LOCAL (Ubuntu)
+# Descripción: Configura una máquina para desplegar una aplicación
+# =====================================
+- name: Despliegue en VMs del DIINF o local
+  hosts: local
+  become: true
+  
+  vars:
+    # CONFIGURACIÓN BÁSICA DEL PROYECTO
+    # ----------------------------------
+    # Nombre del proyecto
+    project_name: "lsg-core-api"
+    
+    # Directorio raíz del proyecto (se ejecuta desde el directorio raíz)
+    project_root: "{{ lookup('env', 'APP_PATH') }}"
+    
+    # Modo de despliegue (false = usar imágenes preconstruidas [RECOMENDADO], true = clonar y construir)
+    clone_repos: true
+
+    # Ruta a docker-compose.yml y .env
+    docker_compose_path: "{{ project_root }}/docker-compose.yml"
+    env_file_path: "{{ project_root }}/.env"
+
+    # Determina si el proyecto utiliza un archivo .env para el docker compose (modificar según tu caso)
+    use_env_file: true
+    
+    # CONFIGURACIÓN DE SERVICIOS DOCKER
+    # ---------------------------------
+    # Prefijo común para las imágenes Docker
+    docker_registry: ""
+    
+    # Definición de servicios (Modificar según tus servicios)
+    services:
+      - name: "lsg-core-api"                                              # Nombre interno del servicio
+        type: "api"                                                       # Tipo: api o frontend
+        #image: "lsg-core-api"                                            # Imagen Docker del servicio (solo cuando clone_repos = false)
+        #tag: "latest"                                                    # Tag de la imagen (solo cuando clone_repos = false)
+        port: "{{ lookup('env', 'API_PORT') | default(8012) | int }}"     # Puerto en el host
+        api_prefix: "lsg-core-api"                                        # Prefijo para la ruta de API en Nginx
+      
+      #- name: "gm"
+      #  type: "api"
+      #  #image: "thecariah/api-gm-test"
+      #  tag: "latest"
+      #  port: 3002
+      #  api_prefix: "api-gm"
+      
+      #- name: "client"
+      #  type: "frontend"
+      #  image: "thecariah/client-test"
+      #  tag: "latest"
+      #  port: 3000
+      #  frontend_prefix: "/"
+      
+      # Para añadir un nuevo servicio, agrega un bloque similar al siguiente:
+      # - name: "nuevo_servicio"
+      #   type: "api"
+      #   image: "usuario/nuevo-servicio"
+      #   tag: "latest"
+      #   port: 3003
+      #   api_prefix: "nuevo-api"
+
+    # Repositorios para clonar (cuando clone_repos = true)
+    service_repos:
+      - name: "lsg-core-api"
+        url: "https://github.com/tu-org/lsg-core-api-prod.git"
+        branch: "main"
+        service: "lsg-core-api"
+      
+      #- name: "api-gm"
+      #  url: "https://github.com/infra-sandbox/api-gm-test.git"
+      #  branch: "main"
+      #  service: "gm"
+      
+      #- name: "client"
+      #  url: "https://github.com/infra-sandbox/client-test.git"
+      #  branch: "main"
+      #  service: "client"
+
+      # Para añadir un nuevo repositorio, agrega un bloque similar al siguiente:
+      # - name: "nuevo_servicio"
+      #   url: "https://github.com/usuario/nuevo-servicio.git"
+      #   branch: "main"
+      #   service: "nuevo_servicio"
+    
+    # CONFIGURACIÓN DE NGINX
+    # ---------------------    
+    # Nombre del servidor (dominio de la VM o "_" para local)
+    nginx_multi_site: false
+
+    server_name: "lsg.diinf.usach.cl"
+
+    # Controla si las rutas definidas en Nginx deben terminar con una barra "/".
+    # true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
+    # false ➝ Nginx no agregará "/" al final (ej: proxy_pass http://localhost:3000).
+    # Recomendación: Si los servicios no se comunican bien entre sí, o los assets no cargan, prueba cambiar este valor.
+    use_trailing_slash: false
+    
+    # Para SSL (enable_ssl: true -> si hay dominio, enable_ssl: false -> sin dominio / local)
+    enable_ssl: true
+    admin_email: "tu_email@usach.cl"
+    ssl_cert_path: "/etc/letsencrypt/live/{{ server_name }}/fullchain.pem"
+    ssl_key_path: "/etc/letsencrypt/live/{{ server_name }}/privkey.pem"
+
+    nginx_sites:
+      - server_name: "lsg.diinf.usach.cl"
+        services:
+          - name: "lsg-core-api"
+            port: 8012
+            api_prefix: "lsg-core-api"
+    
+  roles:
+    - firewall
+    - python
+    - docker
+    - { role: ssl, when: "enable_ssl | bool" }
+    - nginx
+    - provision
+
+# INSTRUCCIONES:
+# 0. REQUISITOS:
+#    - Tener Ansible instalado.
+#    - Tener Git instalado.
+#
+# 1. PREPARACIÓN:
+#    a) Clona el repositorio donde se encuentra los archivos de despliegue, ejemplo:
+#       git clone https://github.com/infra-sandbox/deployment-kit.git
+#    
+#    b) Navega a la ubicación de despliegue (donde están la carpeta Ansible, docker-compose, etc), ejemplo:
+#       cd deployment-kit/deployments/apicore-gm-client
+#
+#    c) Crea un archivo .env y editalo según tu configuración:
+#       touch .env
+#       nano .env
+#
+#    d) Asegurate de tener esta organización de carpetas en tu repositorio:
+#       /{directorio_despliegue}/
+#          /ansible/
+#             /inventory/
+#             /playbooks/
+#             /roles/
+#          /docker-compose.yml
+#          /.env
+#
+# 2. MODO DE DESPLIEGUE:
+#    El playbook soporta dos modos de despliegue controlados por la variable 'clone_repos':
+#
+#    a) clone_repos: false (RECOMENDADO)
+#       - Usa imágenes Docker preconstruidas
+#       - Requiere que TODOS los servicios tengan 'image' y 'tag' definidos
+#       - NO requiere configurar 'service_repos'
+#       - Más rápido y más estable para producción
+#
+#    b) clone_repos: true
+#       - Clona los repositorios y construye las imágenes en la instancia
+#       - NO definir 'image' ni 'tag' en los servicios
+#       - REQUIERE configurar 'service_repos' con los links de los repositorios
+#
+# 3. DEFINE SI USAS UN ARCHIVO .ENV PARA EL DOCKER COMPOSE:
+#    - Si tu proyecto usa un archivo .env, asegúrate de que 'use_env_file' esté en true.
+#      Recuerda crear el archivo .env de forma manual y previo a la ejecución del playbook.
+#
+#    - Si no usas .env, pon 'use_env_file' en false.
+#
+# 4. AÑADIR SERVICIOS:
+#    Agrega bloques como este dentro de services y modifica sus valores:
+#
+#   services:
+#    - name: "nuevo-servicio"          # Nombre único del servicio
+#      type: "api"                     # Tipo: api o frontend
+#      image: "usuario/nueva-imagen"   # Imagen Docker (solo si clone_repos: false)
+#      tag: "latest"                   # Tag de la imagen (solo si clone_repos: false)
+#      port: 3003                      # Puerto en el host
+#      api_prefix: "nuevo-api"         # Ruta de API en Nginx (solo si es tipo api)
+#
+#      IMPORTANTE: Para agregar el frontend debes cambiar el tipo a "frontend" y agregar frontend_prefix. 
+#                  Si tienes más de un frontend, debes definir un prefijo único para cada uno.
+#
+#    Para cuando clone_repos = true, también debes definir service_repos:
+#
+#    service_repos:
+#    - name: "nuevo-servicio"                     # Nombre de la carpeta donde se clonará
+#      url: "https://github.com/tu-org/app.git"   # URL del repositorio
+#      branch: "main"                             # Rama a clonar
+#      service: "nuevo_servicio"                  # Debe coincidir con el 'name' en la sección 'services'
+#
+# 5. CONFIGURACIÓN DEL DOMINIO Y SSL:
+#    a) Para usar un dominio personalizado, modifica las siguientes variables:
+#       - server_name: Dominio de tu servidor (ej: "felucia.diinf.usach.cl")
+#       - enable_ssl: true (para habilitar HTTPS)
+#       - admin_email: Tu email para certificados SSL
+#
+#    b) Si no usas dominio, deja server_name como "_" y enable_ssl como false.
+#
+# 6. CONFIGURACIÓN RUTA DE NGINX:
+#    Controla si las rutas definidas en Nginx deben terminar con una barra "/".
+#     - use_trailing_slash: true  ➝ Nginx agregará "/" al final del proxy_pass (ej: proxy_pass http://localhost:3000/).
+#     - use_trailing_slash: false ➝ Nginx no agregará "/" al final (ej: proxy_pass http://localhost:3000).
+#
+#     Si no defines este valor, se usará true por defecto.
+#
+#     IMPORTANTE: Si los servicios no se comunican bien entre sí, prueba cambiar este valor.
+#
+# 7. EJECUCIÓN DEL PLAYBOOK:
+#    Ejecuta el playbook desde el directorio de despliegue, con el siguiente comando:
+#
+#    sudo ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook ansible/playbooks/deploy_diinf.yml -i ansible/inventory/hosts.ini
+#
+# NOTA:
+# Este playbook está diseñado para ejecutarse desde el directorio de despliegue,
+# donde se encuentran el archivo docker-compose.yml y templates. 
+# No se utiliza GitHub Actions, sino que todo se ejecuta manualmente con Ansible desde tu máquina.
+#
+# PARA MAS INFORMACIÓN, INGRESA A LA GUÍA DE USO: 
+# https://infra-sandbox.gitbook.io/deployment-kit-docs
