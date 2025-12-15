@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: lsg_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpwd
+      MYSQL_DATABASE: db_lsg
+      MYSQL_USER: lsg_user
+      MYSQL_PASSWORD: lsg_password
+    ports:
+      - "3307:3306"          # puerto host 3307 → contenedor 3306
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --sql-mode="STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+
+  api:
+    build: .
+    container_name: lsg_core_api
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: db_lsg
+      DB_USER: lsg_user
+      DB_PASSWORD: lsg_password
+      APP_ENV: local
+      API_VERSION: "1.1.0"
+      GIT_COMMIT: "dev-local"
+
+      # para desarrollo local
+      AUTH_DISABLED: "true"
+
+      # para producción DIINF
+      #AUTH_DISABLED: "false"
+      #AUTH_JWT_SECRET: "el-mismo-secret-que-lsg-auth"
+      #AUTH_JWT_ALGORITHM: "HS256"
+      #AUTH_JWT_ISSUER: "lsg-auth"
+      #AUTH_JWT_AUDIENCE: "lsg-core-api"
+
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+
+volumes:
+  db_data:
