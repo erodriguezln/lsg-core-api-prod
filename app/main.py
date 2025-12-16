@@ -7,7 +7,7 @@ ROOT_PATH = os.getenv("LSG_CORE_API_ROOT_PATH", "")
 
 app = FastAPI(
     title="LifeSync-Games Core API",
-    version="0.1.0",
+    version="1.0.0",
     root_path=ROOT_PATH,
 )
 
