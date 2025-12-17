@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.security import CurrentUser, require_roles, ROLE_ALL
+from app.security import CurrentUser, require_roles
 
 router = APIRouter(prefix="/research/export", tags=["research-export"])
 

@@ -1,8 +1,8 @@
 import os
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.db import DB_HOST, DB_NAME
-from app.security import CurrentUser, require_roles
+from app.security import CurrentUser, require_roles, ROLE_ALL
 
 router = APIRouter(tags=["meta"])
 
