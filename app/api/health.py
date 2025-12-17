@@ -8,7 +8,7 @@ from app.db import get_db
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health", dependencies=[require_roles(ROLE_ALL)])
+@router.get("/health", dependencies=[Depends(require_roles(ROLE_ALL))])
 def health_check():
     """
     Liveness básico: solo indica que la app está levantada.
@@ -18,7 +18,7 @@ def health_check():
     return {"status": "ok"}
 
 
-@router.get("/health/full", dependencies=[require_roles(ROLE_ALL)])
+@router.get("/health/full", dependencies=[Depends(require_roles(ROLE_ALL))])
 def health_full(db: Session = Depends(get_db)):
     """
     Readiness / health extendido:

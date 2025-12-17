@@ -31,7 +31,7 @@ class SensorIngestRequest(BaseModel):
 
 # ---------- Sensors ----------
 
-@router.get("", dependencies=[require_roles(ROLE_ALL)])
+@router.get("", dependencies=[Depends(require_roles(ROLE_ALL))])
 def list_sensors(
     db: Session = Depends(get_db),
 ):
@@ -58,7 +58,7 @@ def list_sensors(
     return list(rows)
 
 
-@router.get("/{sensor_id}/endpoints", dependencies=[require_roles(ROLE_ALL)])
+@router.get("/{sensor_id}/endpoints", dependencies=[Depends(require_roles(ROLE_ALL))])
 def list_sensor_endpoints(
     sensor_id: int,
     db: Session = Depends(get_db),
@@ -91,7 +91,7 @@ def list_sensor_endpoints(
     return list(rows)
 
 
-@router.get("/players/{player_id}", dependencies=[require_roles(guard_player_access)])
+@router.get("/players/{player_id}", dependencies=[Depends(guard_player_access)])
 def get_player_sensors(
     player_id: int,
     db: Session = Depends(get_db),
@@ -137,7 +137,7 @@ def get_player_sensors(
     return list(rows)
 
 
-@router.post("/ingest/webhook", dependencies=[require_roles(ROLE_ALL)])
+@router.post("/ingest/webhook", dependencies=[Depends(require_roles(ROLE_ALL))])
 def ingest_sensor_event(
     payload: SensorIngestRequest,
     db: Session = Depends(get_db),
@@ -197,7 +197,7 @@ def ingest_sensor_event(
     return {"status": "ok", "id_sensor_ingest_event": sie_id}
 
 
-@router.get("/players/{player_id}/ingest-events", dependencies=[require_roles(guard_player_access)])
+@router.get("/players/{player_id}/ingest-events", dependencies=[Depends(guard_player_access)])
 def list_player_ingest_events(
     player_id: int,
     limit: int = Query(100, ge=1, le=500),

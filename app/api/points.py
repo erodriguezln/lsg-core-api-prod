@@ -27,7 +27,7 @@ class PointsAdjustRequest(BaseModel):
 
 # ---------- Attributes & Subattributes ----------
 
-@router.get("/attributes", tags=["attributes"], dependencies=[require_roles(ROLE_ALL)])
+@router.get("/attributes", tags=["attributes"], dependencies=[Depends(require_roles(ROLE_ALL))])
 def list_attributes(
     db: Session = Depends(get_db),
 ):
@@ -48,7 +48,7 @@ def list_attributes(
     return list(rows)
 
 
-@router.get("/attributes/{attribute_id}/subattributes", tags=["attributes"], dependencies=[require_roles(ROLE_ALL)])
+@router.get("/attributes/{attribute_id}/subattributes", tags=["attributes"], dependencies=[Depends(require_roles(ROLE_ALL))])
 def list_subattributes(
     attribute_id: int,
     db: Session = Depends(get_db),
@@ -77,7 +77,7 @@ def list_subattributes(
     return list(rows)
 
 
-@router.get("/attributes-map", tags=["attributes"], dependencies=[require_roles(ROLE_ALL)])
+@router.get("/attributes-map", tags=["attributes"], dependencies=[Depends(require_roles(ROLE_ALL))])
 def get_attributes_map(
     db: Session = Depends(get_db),
 ):
@@ -96,7 +96,7 @@ def get_attributes_map(
 
 # ---------- Points & Balances ----------
 
-@router.get("/players/{player_id}/points/balance", tags=["points"], dependencies=[guard_player_access])
+@router.get("/players/{player_id}/points/balance", tags=["points"], dependencies=[Depends(guard_player_access)])
 def get_player_points_balance(
     player_id: int,
     db: Session = Depends(get_db),
@@ -124,7 +124,7 @@ def get_player_points_balance(
     return list(rows)
 
 
-@router.get("/players/{player_id}/attributes/points", tags=["points"], dependencies=[guard_player_access])
+@router.get("/players/{player_id}/attributes/points", tags=["points"], dependencies=[Depends(guard_player_access)])
 def get_player_attribute_points(
     player_id: int,
     db: Session = Depends(get_db),
@@ -157,7 +157,7 @@ def get_player_attribute_points(
     return list(rows)
 
 
-@router.get("/points/ledger", tags=["points"], dependencies=[require_roles(ROLE_ALL)])
+@router.get("/points/ledger", tags=["points"], dependencies=[Depends(require_roles(ROLE_ALL))])
 def get_points_ledger(
     player_id: Optional[int] = Query(None),
     videogame_id: Optional[int] = Query(None),
@@ -216,7 +216,7 @@ def get_points_ledger(
     return list(rows)
 
 
-@router.post("/players/{player_id}/points/adjust", tags=["points"], dependencies=[require_roles(["admin", "researcher"])])
+@router.post("/players/{player_id}/points/adjust", tags=["points"], dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def adjust_player_points(
     player_id: int,
     payload: PointsAdjustRequest,

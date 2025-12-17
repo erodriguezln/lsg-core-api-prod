@@ -10,7 +10,7 @@ from app.security import require_roles
 router = APIRouter()
 
 
-@router.get("/points-balance", dependencies=[require_roles(["admin", "researcher"])])
+@router.get("/points-balance", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def get_points_balance(
     player_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
@@ -33,7 +33,7 @@ def get_points_balance(
     return {"items": rows}
 
 
-@router.get("/player-game-overview", dependencies=[require_roles(["admin", "researcher"])])
+@router.get("/player-game-overview", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def get_player_game_overview(
     player_id: Optional[int] = Query(None),
     videogame_id: Optional[int] = Query(None),
@@ -73,7 +73,7 @@ def get_player_game_overview(
     return list(rows)
 
 
-@router.get("/player-attribute-balance", dependencies=[require_roles(["admin", "researcher"])])
+@router.get("/player-attribute-balance", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def get_player_attribute_balance(
     player_id: Optional[int] = Query(None),
     attribute_id: Optional[int] = Query(None),
@@ -114,7 +114,7 @@ def get_player_attribute_balance(
     return list(rows)
 
 
-@router.get("/games/time-to-first-redeem", dependencies=[require_roles(["admin", "researcher"])] )  
+@router.get("/games/time-to-first-redeem", dependencies=[Depends(require_roles(["admin", "researcher"]))] )  
 def get_time_to_first_redeem(
     db: Session = Depends(get_db),
 ):
@@ -164,7 +164,7 @@ def get_time_to_first_redeem(
 # ---------- Data quality & sensores ----------
 
 
-@router.get("/sensors/quality", dependencies=[require_roles(["admin", "researcher"])] )
+@router.get("/sensors/quality", dependencies=[Depends(require_roles(["admin", "researcher"]))] )
 def get_sensors_quality(
     player_id: Optional[int] = Query(
         None, description="Filtra por id_players (opcional)"
@@ -266,7 +266,7 @@ def get_sensors_quality(
     return result
 
 
-@router.get("/sensors/ingest-vs-points", dependencies=[require_roles(["admin", "researcher"])] )
+@router.get("/sensors/ingest-vs-points", dependencies=[Depends(require_roles(["admin", "researcher"]))] )
 def get_sensors_ingest_vs_points(
     player_id: Optional[int] = Query(
         None, description="Filtra por id_players (opcional)"

@@ -15,7 +15,7 @@ from app.security import (
 router = APIRouter()
 
 
-@router.get("", dependencies=[require_roles(["admin", "researcher", "teacher"])])
+@router.get("", dependencies=[Depends(require_roles(["admin", "researcher", "teacher"]))])
 def list_players(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
@@ -53,7 +53,7 @@ def list_players(
     }
 
 
-@router.get("/{player_id}", dependencies=[guard_player_access])
+@router.get("/{player_id}", dependencies=[Depends(guard_player_access)])
 def get_player(
     player_id: int,
     db: Session = Depends(get_db),
@@ -81,7 +81,7 @@ def get_player(
     return dict(row)
 
 
-@router.delete("/{player_id}", dependencies=[require_roles(["admin"])])
+@router.delete("/{player_id}", dependencies=[Depends(require_roles(["admin"]))])
 def delete_player(
     player_id: int,
     db: Session = Depends(get_db),
@@ -102,7 +102,7 @@ def delete_player(
     return {"status": "deleted", "id_players": player_id}
 
 
-@router.post("/{player_id}/attributes/init", dependencies=[require_roles(["admin", "teacher", "researcher"])])
+@router.post("/{player_id}/attributes/init", dependencies=[Depends(require_roles(["admin", "teacher", "researcher"]))])
 def init_player_attributes(
     player_id: int,
     db: Session = Depends(get_db),
@@ -128,7 +128,7 @@ def init_player_attributes(
     return {"status": "initialized", "id_players": player_id}
 
 
-@router.get("/{player_id}/games", dependencies=[guard_player_access])
+@router.get("/{player_id}/games", dependencies=[Depends(guard_player_access)])
 def get_player_games(
     player_id: int,
     db: Session = Depends(get_db),
@@ -160,7 +160,7 @@ def get_player_games(
     return list(rows)
 
 
-@router.get("/{player_id}/timeline", dependencies=[guard_player_access])
+@router.get("/{player_id}/timeline", dependencies=[Depends(guard_player_access)])
 def get_player_timeline(
     player_id: int,
     from_ts: Optional[str] = Query(

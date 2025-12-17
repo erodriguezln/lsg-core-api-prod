@@ -97,7 +97,7 @@ def _build_csv_response(rows: List[Dict[str, Any]], filename: str) -> Response:
 # 1) Export: Points ledger
 # =========================
 
-@router.get("/points", dependencies=[require_roles(ROLE_ALL)])
+@router.get("/points", dependencies=[Depends(require_roles(ROLE_ALL))])
 def export_points(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (inicio ventana tiempo, opcional)"
@@ -207,7 +207,7 @@ def export_points(
 # 2) Export: Game sessions
 # =========================
 
-@router.get("/sessions", dependencies=[require_roles(["admin", "researcher"])])
+@router.get("/sessions", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_sessions(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (inicio ventana tiempo, opcional)"
@@ -303,7 +303,7 @@ def export_sessions(
 # 3) Export: Sensor ingest
 # =========================
 
-@router.get("/sensors", dependencies=[require_roles(["admin", "researcher"])])
+@router.get("/sensors", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_sensors(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (inicio ventana tiempo, opcional)"

@@ -69,7 +69,7 @@ def _get_player_dimension_balance(
 
 # ---------- Videogames ----------
 
-@router.get("", dependencies=[require_roles(ROLE_ALL)])
+@router.get("", dependencies=[Depends(require_roles(ROLE_ALL))])
 def list_videogames(
     db: Session = Depends(get_db),
 ):
@@ -99,7 +99,7 @@ def list_videogames(
     return list(rows)
 
 
-@router.get("/{game_id}", dependencies=[require_roles(ROLE_ALL)])
+@router.get("/{game_id}", dependencies=[Depends(require_roles(ROLE_ALL))])
 def get_videogame(
     game_id: int,
     db: Session = Depends(get_db),
@@ -135,7 +135,7 @@ def get_videogame(
     return dict(row)
 
 
-@router.get("/{game_id}/mechanics", dependencies=[require_roles(ROLE_ALL)])
+@router.get("/{game_id}/mechanics", dependencies=[Depends(require_roles(ROLE_ALL))])
 def get_videogame_mechanics(
     game_id: int,
     db: Session = Depends(get_db),
@@ -171,7 +171,7 @@ def get_videogame_mechanics(
 
 # ---------- Redemptions ----------
 
-@router.post("/{game_id}/players/{player_id}/redeem/preview", dependencies=[guard_player_access])
+@router.post("/{game_id}/players/{player_id}/redeem/preview", dependencies=[Depends(guard_player_access)])
 def preview_redeem_mechanic(
     player_id: int,
     payload: RedeemRequest,
@@ -205,7 +205,7 @@ def preview_redeem_mechanic(
     }
 
 
-@router.post("/{game_id}/players/{player_id}/redeem", dependencies=[guard_player_access])
+@router.post("/{game_id}/players/{player_id}/redeem", dependencies=[Depends(guard_player_access)])
 def redeem_mechanic(
     player_id: int,
     payload: RedeemRequest,
@@ -388,7 +388,7 @@ def _get_or_create_player_videogame(
     return result.lastrowid
 
 
-@router.post("/{game_id}/players/{player_id}/sessions", dependencies=[guard_player_access])
+@router.post("/{game_id}/players/{player_id}/sessions", dependencies=[Depends(guard_player_access)])
 def start_session(
     player_id: int,
     payload: SessionStartRequest,
@@ -444,7 +444,7 @@ def start_session(
     return {"status": "started", "id_session": session_id}
 
 
-@router.patch("/{game_id}/players/{player_id}/sessions/{session_id}/end", dependencies=[guard_player_access])
+@router.patch("/{game_id}/players/{player_id}/sessions/{session_id}/end", dependencies=[Depends(guard_player_access)])
 def end_session(
     player_id: int,
     session_id: int,
