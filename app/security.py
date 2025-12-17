@@ -96,9 +96,17 @@ def get_current_user(
             detail="Invalid token: 'sub' missing",
         )
 
-    role = payload.get("role", "player")
+    role = payload.get("role")
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token: 'role' missing",
+        )
     if role not in ROLE_ALL:
-        role = "player"
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=f"Invalid token: 'role' invalid ({role})",
+    )
 
     # Normalizamos player_id a int + fallback desde sub
     player_id_raw = payload.get("player_id") or payload.get("id_players")
