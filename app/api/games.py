@@ -10,8 +10,9 @@ from app.db import get_db
 
 from app.security import (
     CurrentUser,
-    get_current_user,
     guard_player_access,
+    require_roles,
+    ROLE_ALL,
 )
 
 router = APIRouter()
@@ -73,7 +74,7 @@ def _get_player_dimension_balance(
 @router.get("")
 def list_videogames(
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(get_current_user),
+    _: CurrentUser = Depends(require_roles(ROLE_ALL)),
 ):
     """
     # 13. GET /videogames
@@ -342,6 +343,7 @@ def _get_or_create_player_videogame(
     game_id: int,
     plugin_version: Optional[str],
     settings: Optional[dict],
+    _: CurrentUser = Depends(require_roles(ROLE_ALL)),
 ) -> int:
     """
     Ayudante: obtiene id_player_videogame o lo crea.

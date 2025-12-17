@@ -10,8 +10,7 @@ from app.db import get_db
 from app.security import (
     CurrentUser,
     guard_player_access,
-    require_admin,
-    require_admin_or_researcher,
+    require_roles,
 )
 
 router = APIRouter()
@@ -22,7 +21,7 @@ def list_players(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher", "teacher"])),
 ):
     """
     # 1. GET /players
@@ -89,7 +88,7 @@ def get_player(
 def delete_player(
     player_id: int,
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin),
+    _: CurrentUser = Depends(require_roles(["admin"])),
 ):
     """
     # 3. DELETE /players/{player_id}
@@ -111,7 +110,7 @@ def delete_player(
 def init_player_attributes(
     player_id: int,
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
 ):
     """
     # 4. POST /players/{player_id}/attributes/init

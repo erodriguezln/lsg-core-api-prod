@@ -7,11 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.security import (
-    CurrentUser,
-    require_admin,
-    require_admin_or_researcher,
-)
+from app.security import require_roles
 
 router = APIRouter(prefix="/admin", tags=["admin-config"])
 
@@ -159,7 +155,7 @@ def _ensure_exists(db: Session, query: str, params: dict, not_found_msg: str):
 
 @router.get(
     "/attributes",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_list_attributes(
     db: Session = Depends(get_db),
@@ -189,7 +185,7 @@ def admin_list_attributes(
 
 @router.get(
     "/attributes/{attribute_id}",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_get_attribute(
     attribute_id: int,
@@ -222,7 +218,7 @@ def admin_get_attribute(
 @router.post(
     "/attributes",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_create_attribute(
     payload: AttributeCreate,
@@ -259,7 +255,7 @@ def admin_create_attribute(
 
 @router.put(
     "/attributes/{attribute_id}",
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_update_attribute(
     attribute_id: int,
@@ -313,7 +309,7 @@ def admin_update_attribute(
 @router.delete(
     "/attributes/{attribute_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_delete_attribute(
     attribute_id: int,
@@ -353,7 +349,7 @@ def admin_delete_attribute(
 
 @router.get(
     "/subattributes",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_list_subattributes(
     attribute_id: Optional[int] = Query(None),
@@ -385,7 +381,7 @@ def admin_list_subattributes(
 
 @router.get(
     "/subattributes/{sub_id}",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_get_subattribute(
     sub_id: int,
@@ -418,7 +414,7 @@ def admin_get_subattribute(
 @router.post(
     "/subattributes",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_create_subattribute(
     payload: SubattributeCreate,
@@ -473,7 +469,7 @@ def admin_create_subattribute(
 
 @router.put(
     "/subattributes/{sub_id}",
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_update_subattribute(
     sub_id: int,
@@ -537,7 +533,7 @@ def admin_update_subattribute(
 @router.delete(
     "/subattributes/{sub_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_delete_subattribute(
     sub_id: int,
@@ -575,7 +571,7 @@ def admin_delete_subattribute(
 
 @router.get(
     "/point-dimensions",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_list_point_dimensions(
     db: Session = Depends(get_db),
@@ -604,7 +600,7 @@ def admin_list_point_dimensions(
 
 @router.get(
     "/point-dimensions/{pd_id}",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_get_point_dimension(
     pd_id: int,
@@ -636,7 +632,7 @@ def admin_get_point_dimension(
 @router.post(
     "/point-dimensions",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_create_point_dimension(
     payload: PointDimensionCreate,
@@ -701,7 +697,7 @@ def admin_create_point_dimension(
 
 @router.put(
     "/point-dimensions/{pd_id}",
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_update_point_dimension(
     pd_id: int,
@@ -779,7 +775,7 @@ def admin_update_point_dimension(
 @router.delete(
     "/point-dimensions/{pd_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_delete_point_dimension(
     pd_id: int,
@@ -817,7 +813,7 @@ def admin_delete_point_dimension(
 
 @router.get(
     "/modifiable-mechanics",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_list_mod_mechanics(
     db: Session = Depends(get_db),
@@ -845,7 +841,7 @@ def admin_list_mod_mechanics(
 
 @router.get(
     "/modifiable-mechanics/{mm_id}",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_get_mod_mechanic(
     mm_id: int,
@@ -876,7 +872,7 @@ def admin_get_mod_mechanic(
 @router.post(
     "/modifiable-mechanics",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_create_mod_mechanic(
     payload: ModifiableMechanicCreate,
@@ -915,7 +911,7 @@ def admin_create_mod_mechanic(
 
 @router.put(
     "/modifiable-mechanics/{mm_id}",
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_update_mod_mechanic(
     mm_id: int,
@@ -974,7 +970,7 @@ def admin_update_mod_mechanic(
 @router.delete(
     "/modifiable-mechanics/{mm_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_delete_mod_mechanic(
     mm_id: int,
@@ -1014,7 +1010,7 @@ def admin_delete_mod_mechanic(
 
 @router.get(
     "/modifiable-mechanics-videogames",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_list_mod_mech_vg(
     videogame_id: Optional[int] = Query(None),
@@ -1048,7 +1044,7 @@ def admin_list_mod_mech_vg(
 
 @router.get(
     "/modifiable-mechanics-videogames/{mmv_id}",
-    dependencies=[Depends(require_admin_or_researcher)],
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
 )
 def admin_get_mod_mech_vg(
     mmv_id: int,
@@ -1083,7 +1079,7 @@ def admin_get_mod_mech_vg(
 @router.post(
     "/modifiable-mechanics-videogames",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_create_mod_mech_vg(
     payload: ModifiableMechanicVGCreate,
@@ -1146,7 +1142,7 @@ def admin_create_mod_mech_vg(
 
 @router.put(
     "/modifiable-mechanics-videogames/{mmv_id}",
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_update_mod_mech_vg(
     mmv_id: int,
@@ -1219,7 +1215,7 @@ def admin_update_mod_mech_vg(
 @router.delete(
     "/modifiable-mechanics-videogames/{mmv_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_roles(["admin"]))],
 )
 def admin_delete_mod_mech_vg(
     mmv_id: int,

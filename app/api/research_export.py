@@ -13,7 +13,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.security import CurrentUser, require_admin_or_researcher
+from app.security import CurrentUser, require_roles, ROLE_ALL
 
 router = APIRouter(prefix="/research/export", tags=["research-export"])
 
@@ -125,7 +125,7 @@ def export_points(
         None, ge=1, le=100000, description="Límite máximo de filas (opcional)"
     ),
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher", "teacher", "player"])),
 ):
     """
     Exporta movimientos de puntos (points_ledger) con contexto mínimo
@@ -232,7 +232,7 @@ def export_sessions(
         None, ge=1, le=100000, description="Límite máximo de filas (opcional)"
     ),
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
 ):
     """
     Exporta sesiones de juego (lsg_game_session + player_videogame + videogame + players).
@@ -329,7 +329,7 @@ def export_sensors(
         None, ge=1, le=100000, description="Límite máximo de filas (opcional)"
     ),
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
 ):
     """
     Exporta eventos de sensor (sensor_ingest_event) con contexto:

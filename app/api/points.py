@@ -10,7 +10,8 @@ from app.db import get_db
 from app.security import (
     CurrentUser,
     get_current_user,
-    require_admin_or_researcher,
+    require_roles,
+    ROLE_ALL,
     guard_player_access,
 )
 
@@ -172,7 +173,7 @@ def get_points_ledger(
     from_ts: Optional[str] = Query(None, description="YYYY-MM-DD HH:MM:SS"),
     to_ts: Optional[str] = Query(None, description="YYYY-MM-DD HH:MM:SS"),
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher", "teacher", "player"])),
 ):
     """
     # 11. GET /points/ledger
@@ -229,7 +230,7 @@ def adjust_player_points(
     player_id: int,
     payload: PointsAdjustRequest,
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
 ):
     """
     # 12. POST /players/{player_id}/points/adjust

@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.security import CurrentUser, require_admin_or_researcher
+from app.security import CurrentUser, require_roles
 
 router = APIRouter(prefix="/admin/points", tags=["admin-points"])
 
@@ -36,7 +36,7 @@ def _count_and_sample(
 def admin_points_consistency_check(
     limit_issues: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
 ):
     """
     Ejecuta un conjunto de checks de consistencia sobre puntos.

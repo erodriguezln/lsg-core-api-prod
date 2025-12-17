@@ -11,7 +11,8 @@ from app.db import get_db
 from app.security import (
     CurrentUser,
     get_current_user,
-    require_admin_or_researcher,
+    require_roles,
+    ROLE_ALL,   
     guard_player_access,
 )
 
@@ -36,7 +37,7 @@ class SensorIngestRequest(BaseModel):
 @router.get("")
 def list_sensors(
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(ROLE_ALL)),
 ):
     """
     # 19. GET /sensors
@@ -65,7 +66,7 @@ def list_sensors(
 def list_sensor_endpoints(
     sensor_id: int,
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_admin_or_researcher),
+    _: CurrentUser = Depends(require_roles(ROLE_ALL)),
 ):
     """
     # 20. GET /sensors/{sensor_id}/endpoints

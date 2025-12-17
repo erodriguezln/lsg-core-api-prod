@@ -97,6 +97,8 @@ def get_current_user(
         )
 
     role = payload.get("role", "player")
+    if role not in ROLE_ALL:
+        role = "player"
 
     # Normalizamos player_id a int + fallback desde sub
     player_id_raw = payload.get("player_id") or payload.get("id_players")
@@ -129,24 +131,25 @@ def get_current_user(
 
 
 def require_roles(allowed_roles: List[str]):
-    """
-    Crea una dependencia que exige que el usuario tenga alguno de los roles permitidos.
-    """
-
     def dependency(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        # Modo “todo abierto” (útil para dejar operativo y luego endurecer)
+        if AUTH_OPEN_ALL:
+            return current_user
+
         if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Insufficient permissions (required roles: {allowed_roles})",
             )
         return current_user
-
     return dependency
+
 
 
 # Atajos de roles típicos
 require_admin = require_roles(["admin"])
 require_admin_or_researcher = require_roles(["admin", "researcher"])
+require_admin_or_researcher_or_teacher = require_roles(["admin", "researcher", "teacher"])
 require_player_or_higher = require_roles(ROLE_ALL)
 
 
@@ -154,20 +157,20 @@ def guard_player_access(
     player_id: int,
     current_user: CurrentUser = Depends(get_current_user),
 ) -> CurrentUser:
-    """
-    Permite acceso si:
-    - el usuario es admin/researcher/teacher/player, o
-    - el usuario corresponde al mismo player_id (jugador viendo sus propios datos).
-
-    Útil en endpoints tipo /players/{player_id}/...
-    """
-    if current_user.role in ("admin", "researcher", "teacher", "player"):
+    # Modo abierto: todo pasa
+    if AUTH_OPEN_ALL:
         return current_user
 
-    if current_user.player_id is not None and current_user.player_id == player_id:
+    # Roles elevados: pueden ver a cualquiera
+    if current_user.role in ("admin", "researcher", "teacher"):
+        return current_user
+
+    # Player: solo su propio player_id
+    if current_user.role == "player" and current_user.player_id == player_id:
         return current_user
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Not allowed to access this player's data",
     )
+

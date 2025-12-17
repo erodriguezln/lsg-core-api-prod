@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.security import CurrentUser, require_roles
 from app.db import get_db
 
 router = APIRouter(tags=["health"])
@@ -18,7 +19,7 @@ def health_check():
 
 
 @router.get("/health/full")
-def health_full(db: Session = Depends(get_db)):
+def health_full(db: Session = Depends(get_db), _: CurrentUser = Depends(require_roles(["admin", "researcher"]))):
     """
     Readiness / health extendido:
     - Chequea conexión a la base de datos.

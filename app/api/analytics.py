@@ -5,12 +5,17 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.security import CurrentUser, require_roles
 
 router = APIRouter()
 
 
 @router.get("/points-balance")
-def get_points_balance(player_id: Optional[int] = None, db: Session = Depends(get_db)):
+def get_points_balance(
+    player_id: Optional[int] = Query(None),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
+    db: Session = Depends(get_db),
+):
     """
     # 25. GET /analytics/points-balance
     Lee desde v_points_balance.
@@ -33,6 +38,7 @@ def get_points_balance(player_id: Optional[int] = None, db: Session = Depends(ge
 def get_player_game_overview(
     player_id: Optional[int] = Query(None),
     videogame_id: Optional[int] = Query(None),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
     db: Session = Depends(get_db),
 ):
     """
@@ -73,6 +79,7 @@ def get_player_game_overview(
 def get_player_attribute_balance(
     player_id: Optional[int] = Query(None),
     attribute_id: Optional[int] = Query(None),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
     db: Session = Depends(get_db),
 ):
     """
@@ -111,7 +118,10 @@ def get_player_attribute_balance(
 
 
 @router.get("/games/time-to-first-redeem")
-def get_time_to_first_redeem(db: Session = Depends(get_db)):
+def get_time_to_first_redeem(
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
+    db: Session = Depends(get_db),
+):
     """
     # 27. GET /analytics/games/time-to-first-redeem
     Versión simple: tiempo promedio (en minutos) desde primera sesión
@@ -160,6 +170,7 @@ def get_time_to_first_redeem(db: Session = Depends(get_db)):
 
 @router.get("/sensors/quality")
 def get_sensors_quality(
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
     player_id: Optional[int] = Query(
         None, description="Filtra por id_players (opcional)"
     ),
@@ -274,6 +285,7 @@ def get_sensors_ingest_vs_points(
     to_ts: Optional[str] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (fin ventana tiempo, opcional)"
     ),
+    _: CurrentUser = Depends(require_roles(["admin", "researcher"])),
     db: Session = Depends(get_db),
 ):
     """
