@@ -170,7 +170,7 @@ def create_videogame(
 
     Nota: por defecto conviene omitir id_videogame para que sea AUTO_INCREMENT.
 
-    Acceso: (actual) abierto a todos (ROLE_ALL). Ajustable si luego quieres restringir.
+    Acceso: abierto a todos.
     """
     # 1) Validación mínima: evitar duplicados por nombre
     exists = db.execute(
