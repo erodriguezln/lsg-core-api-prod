@@ -137,6 +137,138 @@ def get_videogame(
     return dict(row)
 
 
+# ---------- Models ----------
+
+from pydantic import BaseModel
+from typing import Optional
+
+
+class VideogameCreateRequest(BaseModel):
+    # Opcional: recomendado NO enviarlo y dejar que MySQL asigne el correlativo
+    id_videogame: Optional[int] = None
+
+    name: str
+    genre: Optional[str] = None
+    engine: Optional[str] = None
+    developer: Optional[str] = None
+    publisher: Optional[str] = None
+    launch: Optional[str] = None
+    version: Optional[str] = None
+    type: Optional[str] = None
+
+
+# ---------- Videogames ----------
+
+@router.post("", status_code=201, dependencies=[Depends(require_roles(ROLE_ALL))])
+def create_videogame(
+    payload: VideogameCreateRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    POST /videogames
+    Crea un nuevo videojuego en la tabla `videogame`.
+
+    Nota: por defecto conviene omitir id_videogame para que sea AUTO_INCREMENT.
+
+    Acceso: (actual) abierto a todos (ROLE_ALL). Ajustable si luego quieres restringir.
+    """
+    # 1) Validación mínima: evitar duplicados por nombre
+    exists = db.execute(
+        text(
+            """
+            SELECT id_videogame
+            FROM videogame
+            WHERE LOWER(name) = LOWER(:name)
+            LIMIT 1
+            """
+        ),
+        {"name": payload.name},
+    ).mappings().first()
+
+    if exists:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "VIDEOGAME_ALREADY_EXISTS",
+                "message": "Ya existe un videojuego con ese nombre.",
+                "id_videogame": exists["id_videogame"],
+                "name": payload.name,
+            },
+        )
+
+    params = {
+        "id_videogame": payload.id_videogame,
+        "name": payload.name,
+        "genre": payload.genre,
+        "engine": payload.engine,
+        "developer": payload.developer,
+        "publisher": payload.publisher,
+        "launch": payload.launch,
+        "version": payload.version,
+        "type": payload.type,
+    }
+
+    try:
+        # 2) Insert: con o sin id_videogame (si lo mandas explícito)
+        if payload.id_videogame is None:
+            result = db.execute(
+                text(
+                    """
+                    INSERT INTO videogame (
+                      name, genre, engine, developer, publisher, launch, version, type
+                    ) VALUES (
+                      :name, :genre, :engine, :developer, :publisher, :launch, :version, :type
+                    )
+                    """
+                ),
+                params,
+            )
+            new_id = int(result.lastrowid)
+        else:
+            db.execute(
+                text(
+                    """
+                    INSERT INTO videogame (
+                      id_videogame, name, genre, engine, developer, publisher, launch, version, type
+                    ) VALUES (
+                      :id_videogame, :name, :genre, :engine, :developer, :publisher, :launch, :version, :type
+                    )
+                    """
+                ),
+                params,
+            )
+            new_id = int(payload.id_videogame)
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error creating videogame: {e}")
+
+    # 3) Retornar el registro creado
+    row = db.execute(
+        text(
+            """
+            SELECT
+              id_videogame,
+              name,
+              genre,
+              engine,
+              developer,
+              publisher,
+              launch,
+              version,
+              type
+            FROM videogame
+            WHERE id_videogame = :id
+            """
+        ),
+        {"id": new_id},
+    ).mappings().first()
+
+    return dict(row)
+
+
 @router.get("/{game_id}/mechanics", dependencies=[Depends(require_roles(ROLE_ALL))])
 def get_videogame_mechanics(
     game_id: int,
