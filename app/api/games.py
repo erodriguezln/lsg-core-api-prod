@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from app.security import (
     CurrentUser,
     ROLE_ALL,
 )
+from app.api.sse import sse_manager
 
 router = APIRouter()
 
@@ -25,6 +26,7 @@ class RedeemRequest(BaseModel):
     point_dimension_id: int
     amount: int
     metadata: Optional[dict] = None
+    source_ref: Optional[str] = None
 
 
 class SessionStartRequest(BaseModel):
@@ -176,6 +178,7 @@ def get_videogame_mechanics(
 @router.post("/{game_id}/players/{player_id}/redeem/preview", dependencies=[Depends(guard_player_access)])
 def preview_redeem_mechanic(
     player_id: int,
+    game_id: int,
     payload: RedeemRequest,
     db: Session = Depends(get_db),
 ):
@@ -194,7 +197,9 @@ def preview_redeem_mechanic(
     )
 
     would_be_enough = current_balance >= payload.amount
-    new_balance = current_balance - payload.amount if would_be_enough else current_balance
+    new_balance = (
+        current_balance - payload.amount if would_be_enough else current_balance
+    )
 
     return {
         "can_redeem": would_be_enough,
@@ -210,7 +215,9 @@ def preview_redeem_mechanic(
 @router.post("/{game_id}/players/{player_id}/redeem", dependencies=[Depends(guard_player_access)])
 def redeem_mechanic(
     player_id: int,
+    game_id: int,
     payload: RedeemRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """
@@ -224,6 +231,55 @@ def redeem_mechanic(
     """
     from uuid import uuid4
     import json
+
+    # Check si viene un source_ref en el body, es importante procurar que si lo usan, sea un UUID4
+    if payload.source_ref:
+        # Query para revisar si existe, posiblemente se realizo y se corto internet antes del OK al cliente
+        existing = (
+            db.execute(
+                text(
+                    """
+            SELECT id_points_ledger, amount, source_ref
+            FROM points_ledger
+            WHERE id_players = :pid
+              AND source_ref = :ref
+              AND source_type = 'REDEMPTION'
+                    """
+                ),
+                {"pid": player_id, "ref": payload.source_ref},
+            )
+            .mappings()
+            .first()
+        )
+
+        # Si existe,
+        if existing:
+            current_balance = _get_player_dimension_balance(
+                db=db,
+                player_id=player_id,
+                point_dimension_id=payload.point_dimension_id,
+            )
+
+            # Esto podria presentar problemas al no ser 100% correcto en casos especificos como desconexion prolongada, y que una vez conectado el current_balance no sea exactamente el mismo (sensores sumaron puntos), sin embargo es solo un response y si el balance se actualiza por otro endpoint, no significaria mayor problema.
+            original_balance_estimate = current_balance + existing["amount"]
+
+            return {
+                "status": "redeemed",
+                "points_ledger_id": existing["id_points_ledger"],
+                "source_ref": existing["source_ref"],
+                "current_balance": original_balance_estimate,
+                "redeemed_amount": existing["amount"],
+                "resulting_balance": current_balance,
+                "game_id": game_id,
+                "player_id": player_id,
+                "point_dimension_id": payload.point_dimension_id,
+            }
+
+        # Se utiliza el source_ref del body
+        source_ref = payload.source_ref
+    else:
+        # Genera uno el backend
+        source_ref = f"REDEMPTION-{uuid4()}"
 
     # 1) Obtener saldo actual
     current_balance = _get_player_dimension_balance(
@@ -243,31 +299,29 @@ def redeem_mechanic(
             },
         )
 
-    source_ref = f"REDEMPTION-{uuid4()}"
-
     try:
         # 2) Registrar débito en points_ledger
         result = db.execute(
             text(
                 """
                 INSERT INTO points_ledger (
-                  id_players,
-                  id_point_dimension,
-                  id_videogame,
-                  direction,
-                  amount,
-                  source_type,
-                  source_ref,
-                  payload
+                id_players,
+                id_point_dimension,
+                id_videogame,
+                direction,
+                amount,
+                source_type,
+                source_ref,
+                payload
                 ) VALUES (
-                  :id_players,
-                  :id_point_dimension,
-                  :id_videogame,
-                  'DEBIT',
-                  :amount,
-                  'REDEMPTION',
-                  :source_ref,
-                  :payload
+                :id_players,
+                :id_point_dimension,
+                :id_videogame,
+                'DEBIT',
+                :amount,
+                'REDEMPTION',
+                :source_ref,
+                :payload
                 )
                 """
             ),
@@ -277,7 +331,7 @@ def redeem_mechanic(
                 "id_videogame": game_id,
                 "amount": payload.amount,
                 "source_ref": source_ref,
-                "payload": json.dumps(payload.metadata) if payload.metadata else None,
+                "payload": (json.dumps(payload.metadata) if payload.metadata else None),
             },
         )
         pl_id = result.lastrowid
@@ -287,13 +341,13 @@ def redeem_mechanic(
             text(
                 """
                 INSERT INTO redemption_event (
-                  id_points_ledger,
-                  id_modifiable_mechanic_videogame,
-                  redeemed_points
+                id_points_ledger,
+                id_modifiable_mechanic_videogame,
+                redeemed_points
                 ) VALUES (
-                  :pl_id,
-                  :mmv_id,
-                  :points
+                :pl_id,
+                :mmv_id,
+                :points
                 )
                 """
             ),
@@ -308,6 +362,19 @@ def redeem_mechanic(
 
         # 4) Estimar nuevo balance (puedes volver a consultar la vista si quieres exactitud)
         resulting_balance = current_balance - payload.amount
+
+        # announce it
+        background_tasks.add_task(
+            sse_manager.broadcast,
+            player_id,
+            "REDEEM",
+            {
+                "source_ref": source_ref,
+                "amount": payload.amount,
+                "game_id": game_id,
+                "new_balance": resulting_balance,
+            },
+        )
 
     except HTTPException:
         raise
@@ -393,6 +460,7 @@ def _get_or_create_player_videogame(
 @router.post("/{game_id}/players/{player_id}/sessions", dependencies=[Depends(guard_player_access)])
 def start_session(
     player_id: int,
+    game_id: int,
     payload: SessionStartRequest,
     db: Session = Depends(get_db),
 ):
@@ -449,6 +517,7 @@ def start_session(
 @router.patch("/{game_id}/players/{player_id}/sessions/{session_id}/end", dependencies=[Depends(guard_player_access)])
 def end_session(
     player_id: int,
+    game_id: int,
     session_id: int,
     payload: SessionEndRequest,
     db: Session = Depends(get_db),
