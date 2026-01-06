@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Environment
+.env
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Ansible
+# *.retry
+# ansible/inventory/hosts.ini.save
+
+# OS
+.DS_Store

@@ -2,7 +2,7 @@ version: "3.9"
 
 networks:
   lsg_shared:
-     external: true
+    external: true
 
 services:
   db:
@@ -15,8 +15,8 @@ services:
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
     # En DIINF NO exponemos el puerto de MySQL hacia fuera
-    # ports:
-    #   - "${DB_HOST_PORT:-3307}:3306"
+    ports:
+      - "${DB_HOST_PORT:-3307}:3306"
     volumes:
       - db_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
@@ -50,15 +50,15 @@ services:
       AUTH_JWT_ALGORITHM: ${AUTH_JWT_ALGORITHM}
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER}
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE}
-  
+
     env_file:
       - .env
     # En prod no montamos el código del host como volumen
     # (evitamos cambios accidentales en caliente)
-    # volumes:
-    #   - .:/app
+    volumes:
+      - .:/app
     working_dir: /app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "${API_PORT:-8012}:8000"
     networks:
