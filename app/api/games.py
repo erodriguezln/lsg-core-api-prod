@@ -37,6 +37,16 @@ class SessionStartRequest(BaseModel):
 class SessionEndRequest(BaseModel):
     ended_at: Optional[datetime] = None
 
+class ModifiableMechanicCreateRequest(BaseModel):
+    name: str
+    description: Optional[str] = None
+    type: Optional[str] = None
+
+
+class ModifiableMechanicVideogameCreateRequest(BaseModel):
+    id_modifiable_mechanic: int
+    options: Optional[dict] = None
+
 
 # ---------- Helpers ----------
 
@@ -670,3 +680,135 @@ def end_session(
         raise HTTPException(status_code=400, detail=f"Error ending session: {e}")
 
     return {"status": "ended", "id_session": session_id}
+
+
+# ---------- Mechanics ----------
+
+@router.post("/mechanics/catalog", status_code=201, dependencies=[Depends(require_roles(ROLE_ALL))])
+def create_modifiable_mechanic(
+    payload: ModifiableMechanicCreateRequest,
+    db: Session = Depends(get_db),
+):
+    # Evitar duplicado por name (case-insensitive)
+    exists = db.execute(
+        text("""
+            SELECT id_modifiable_mechanic
+            FROM modifiable_mechanic
+            WHERE LOWER(name) = LOWER(:name)
+            LIMIT 1
+        """),
+        {"name": payload.name},
+    ).mappings().first()
+
+    if exists:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "MECHANIC_ALREADY_EXISTS",
+                "message": "Ya existe una mecánica con ese name.",
+                "id_modifiable_mechanic": exists["id_modifiable_mechanic"],
+                "name": payload.name,
+            },
+        )
+
+    try:
+        result = db.execute(
+            text("""
+                INSERT INTO modifiable_mechanic (name, description, type)
+                VALUES (:name, :description, :type)
+            """),
+            {
+                "name": payload.name,
+                "description": payload.description,
+                "type": payload.type,
+            },
+        )
+        db.commit()
+        new_id = int(result.lastrowid)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error creating mechanic: {e}")
+
+    row = db.execute(
+        text("""
+            SELECT id_modifiable_mechanic, name, description, type
+            FROM modifiable_mechanic
+            WHERE id_modifiable_mechanic = :id
+        """),
+        {"id": new_id},
+    ).mappings().first()
+
+    return dict(row)
+
+
+@router.post("/{game_id}/mechanics", status_code=201, dependencies=[Depends(require_roles(ROLE_ALL))])
+def attach_mechanic_to_videogame(
+    game_id: int,
+    payload: ModifiableMechanicVideogameCreateRequest,
+    db: Session = Depends(get_db),
+):
+    import json
+
+    # Verificar que exista el juego
+    vg = db.execute(
+        text("SELECT 1 FROM videogame WHERE id_videogame = :gid"),
+        {"gid": game_id},
+    ).mappings().first()
+    if not vg:
+        raise HTTPException(status_code=404, detail="Videogame not found")
+
+    # Verificar que exista la mecánica
+    mech = db.execute(
+        text("SELECT 1 FROM modifiable_mechanic WHERE id_modifiable_mechanic = :mid"),
+        {"mid": payload.id_modifiable_mechanic},
+    ).mappings().first()
+    if not mech:
+        raise HTTPException(status_code=404, detail="Modifiable mechanic not found")
+
+    # Evitar duplicado (misma mecánica asociada al mismo juego)
+    exists = db.execute(
+        text("""
+            SELECT id_modifiable_mechanic_videogame
+            FROM modifiable_mechanic_videogames
+            WHERE id_videogame = :gid AND id_modifiable_mechanic = :mid
+            LIMIT 1
+        """),
+        {"gid": game_id, "mid": payload.id_modifiable_mechanic},
+    ).mappings().first()
+
+    if exists:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "MECHANIC_ALREADY_ATTACHED",
+                "message": "La mecánica ya está asociada a este juego.",
+                "id_modifiable_mechanic_videogame": exists["id_modifiable_mechanic_videogame"],
+                "game_id": game_id,
+                "id_modifiable_mechanic": payload.id_modifiable_mechanic,
+            },
+        )
+
+    try:
+        result = db.execute(
+            text("""
+                INSERT INTO modifiable_mechanic_videogames (id_videogame, id_modifiable_mechanic, options)
+                VALUES (:gid, :mid, :options)
+            """),
+            {
+                "gid": game_id,
+                "mid": payload.id_modifiable_mechanic,
+                "options": json.dumps(payload.options) if payload.options else None,
+            },
+        )
+        db.commit()
+        mmv_id = int(result.lastrowid)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error attaching mechanic: {e}")
+
+    return {
+        "id_modifiable_mechanic_videogame": mmv_id,
+        "game_id": game_id,
+        "id_modifiable_mechanic": payload.id_modifiable_mechanic,
+        "options": payload.options,
+    }
