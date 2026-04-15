@@ -1,5 +1,5 @@
 from typing import Literal, Optional
-
+import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -92,7 +92,10 @@ def get_attributes_map(
         text("SELECT sp_get_att_subattributes_name() AS data")
     ).mappings().first()
 
-    return row["data"] if row and row["data"] is not None else []
+    if not row or row["data"] is None:
+        return []
+
+    return json.loads(row["data"]) if isinstance(row["data"], str) else row["data"]
 
 
 # ---------- Points & Balances ----------
@@ -230,7 +233,6 @@ def adjust_player_points(
     Acceso: admin, researcher.
     """
     from uuid import uuid4
-    import json
 
     source_ref = f"ADJUST-{uuid4()}"
 
