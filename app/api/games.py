@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -349,8 +349,17 @@ def get_videogame_mechanics(
         {"game_id": game_id},
     ).mappings().all()
 
-    return list(rows)
+    result = []
+    for row in rows:
+        row_dict = dict(row)
+        if row_dict.get('options') and isinstance(row_dict['options'], str):
+            try:
+                row_dict['options'] = json.loads(row_dict['options'])
+            except json.JSONDecodeError:
+                pass
+        result.append(row_dict)
 
+    return result
 
 # ---------- Redemptions ----------
 
