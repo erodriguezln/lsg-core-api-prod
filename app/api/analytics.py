@@ -376,3 +376,47 @@ def get_sensors_ingest_vs_points(
         result.append(r)
 
     return result
+
+
+@router.get("/ic2/summary", dependencies=[Depends(require_roles(["admin","researcher"]))])
+def get_ic2_summary(
+    experiment_tag: Optional[str] = Query(
+        None, description="Filtrar por etiqueta AUDIT"
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Resumen estadístico agregado de IC² por condición y período.
+
+    Retorna: media, SD, min, max de IC_fis, IC_ment, IC_LSG e IAR
+    por experiment_tag. 
+
+    **Acceso:** admin, researcher.
+    """
+    base = """
+        SELECT
+          r.experiment_tag,
+          SUBSTRING_INDEX(r.experiment_tag, '_', -1) AS condicion,
+          COUNT(DISTINCT r.id_players)               AS n_participantes,
+          COUNT(*)                                   AS n_calculos,
+          ROUND(AVG(r.IC_fis),   4) AS IC_fis_media,
+          ROUND(STDDEV(r.IC_fis),4) AS IC_fis_sd,
+          ROUND(AVG(r.IC_ment),  4) AS IC_ment_media,
+          ROUND(STDDEV(r.IC_ment),4)AS IC_ment_sd,
+          ROUND(AVG(r.IC_LSG),   4) AS IC_LSG_media,
+          ROUND(STDDEV(r.IC_LSG),4) AS IC_LSG_sd,
+          ROUND(AVG(r.IAR),      4) AS IAR_media,
+          ROUND(STDDEV(r.IAR),   4) AS IAR_sd,
+          MIN(r.window_start)        AS primer_registro,
+          MAX(r.window_end)          AS ultimo_registro
+        FROM ic2_result r
+        WHERE r.experiment_tag IS NOT NULL
+    """
+    params = {}
+    if experiment_tag:
+        base += " AND r.experiment_tag = :etag"
+        params["etag"] = experiment_tag
+    base += " GROUP BY r.experiment_tag ORDER BY condicion, primer_registro"
+ 
+    rows = db.execute(text(base), params).mappings().all()
+    return {"items": list(rows), "count": len(rows)}

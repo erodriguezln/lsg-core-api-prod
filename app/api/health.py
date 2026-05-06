@@ -43,10 +43,16 @@ def health_full(db: Session = Depends(get_db)):
 
     # 2) Vistas críticas para LSG
     views = [
+        # Vistas core
         "v_points_balance",
         "v_player_game_overview",
         "v_player_attribute_balance",
+        # Vistas IC² (PATCH-03 / PATCH-06)
+        "v_ic2_latest",
+        "v_player_active_roles",
     ]
+    # Tablas de features nuevas (verificar existencia, no contenido)
+    feature_tables = ["ic2_result", "offline_points_queue", "interaction_logs", "player_roles"]
     view_results = []
 
     for view in views:
@@ -61,10 +67,21 @@ def health_full(db: Session = Depends(get_db)):
 
     checks["views"] = view_results
 
+    # 2b) Tablas de features nuevas
+    table_results = []
+    for tbl in feature_tables:
+        try:
+            db.execute(text(f"SELECT 1 FROM {tbl} LIMIT 1"))
+            table_results.append({"name": tbl, "status": "ok"})
+        except Exception as e:
+            table_results.append({"name": tbl, "status": "error", "detail": str(e)})
+
+    checks["feature_tables"] = table_results
+
     # 3) Estado global
     if checks["database"]["status"] != "ok":
         status = "error"
-    elif any(v["status"] != "ok" for v in view_results):
+    elif any(v["status"] != "ok" for v in view_results + table_results):
         status = "degraded"
     else:
         status = "ok"

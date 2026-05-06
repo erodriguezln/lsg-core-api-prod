@@ -8,9 +8,10 @@ from urllib.parse import unquote
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
-from pydantic import BeforeValidator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from urllib.parse import unquote
+from pydantic import BeforeValidator
 
 from app.db import get_db
 from app.security import (
@@ -312,4 +313,90 @@ def export_sensors(
     if format == "csv":
         return _build_csv_response(data, "sensors_export.csv")
 
+    return {"items": data, "count": len(data)}
+
+
+# Export IC²
+
+@router.get("/ic2", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+def export_ic2_results(
+    from_date: Optional[str] = Query(
+        None, description="YYYY-MM-DD (inicio ventana)"
+    ),
+    to_date: Optional[str] = Query(
+        None, description="YYYY-MM-DD (fin ventana)"
+    ),
+    player_id: Optional[int] = Query(
+        None, description="Filtra por id_players (opcional)"
+    ),
+    experiment_tag: Optional[str] = Query(
+        None, description="Filtra por etiqueta FONDECYT (ej: LSG_C1_T1_CV)"
+    ),
+    version_tag: Optional[str] = Query(
+        None, description="Versión de goalposts (default: v1.0-SCCC2026)"
+    ),
+    format: str = Query(
+        "json", pattern="^(json|csv)$", description="Formato de salida"
+    ),
+    include_raw_ids: bool = Query(
+        False, description="Si false, elimina id_players/nombre/email"
+    ),
+    limit: Optional[int] = Query(
+        None, ge=1, le=100000, description="Límite máximo de filas"
+    ),
+    db: Session = Depends(get_db)
+):
+    """
+    Exporta resultados IC² para análisis de investigación FONDECYT.
+ 
+    Incluye: índices IC² (Icf, Isfg, Ipma, Itd, IC_fis, IC_ment, IC_LSG, IAR),
+    señales crudas, admisibilidad, experiment_tag y ventana temporal.
+ 
+    Compatible con las queries de FONDECYT_QUERIES_HITO3.sql.
+ 
+    **Acceso:** admin, researcher.
+    """
+    base = """
+        SELECT
+          r.id_ic2_result,
+          r.id_players,
+          p.name          AS player_name,
+          p.email         AS player_email,
+          v.version_tag,
+          r.window_start,
+          r.window_end,
+          r.Icf, r.Isfg, r.Ipma, r.Itd,
+          r.IC_fis, r.IC_ment, r.IC_LSG, r.IAR,
+          r.admissibility,
+          r.raw_inputs,
+          r.experiment_tag,
+          r.computed_at
+        FROM ic2_result r
+        JOIN players              p ON p.id_players = r.id_players
+        JOIN ic2_goalpost_version v ON v.id_version  = r.id_version
+    """
+    conditions, params = [], {}
+ 
+    if from_date:
+        conditions.append("r.window_start >= :fd");  params["fd"] = from_date
+    if to_date:
+        conditions.append("r.window_end <= :td");    params["td"] = to_date
+    if player_id:
+        conditions.append("r.id_players = :pid");    params["pid"] = player_id
+    if experiment_tag:
+        conditions.append("r.experiment_tag = :etag"); params["etag"] = experiment_tag
+    if version_tag:
+        conditions.append("v.version_tag = :vtag");  params["vtag"] = version_tag
+ 
+    if conditions:
+        base += " WHERE " + " AND ".join(conditions)
+    base += " ORDER BY r.id_players, r.window_start"
+    if limit:
+        base += " LIMIT :limit"; params["limit"] = limit
+ 
+    rows = db.execute(text(base), params).mappings().all()
+    data = _apply_pseudonymization([dict(r) for r in rows], include_raw_ids)
+
+    if format == "csv":
+        return _build_csv_response(data, "ic2_export.csv")
     return {"items": data, "count": len(data)}
