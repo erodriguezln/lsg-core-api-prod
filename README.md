@@ -120,7 +120,7 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
    Body: username=email&password=...
    → {"access_token": "eyJ...", "token_type": "bearer"}
 
-   El token expira en 10 minutos (JWT_EXPIRE_MINUTES=10).
+   El token expira en 120 minutos (JWT_EXPIRE_MINUTES=120).
    Consultar tiempo restante: GET /lsg-auth/token/remaining
 
 2. Autorizar en Swagger de Core API

@@ -24,7 +24,7 @@ CORE_DOCS_DESCRIPTION = """
 1. **Obtén un token en LSG-auth**:
    - Swagger Auth: `/lsg-auth/docs`
    - `POST /login` → copia `access_token`
-   - El token expira en **10 minutos** (`JWT_EXPIRE_MINUTES=10`)
+   - El token expira en **120 minutos** (`JWT_EXPIRE_MINUTES=120`)
    - Consulta tiempo restante: `GET /lsg-auth/token/remaining`
 
 2. **Autoriza en este Swagger**:
