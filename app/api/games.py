@@ -66,7 +66,6 @@ def _get_player_global_dimension_balance(
     """
     Balance GLOBAL por jugador + dimensión.
     Ignora id_videogame para permitir canje cross-game.
-
     Si for_update=True: usa FOR UPDATE para evitar double-spend en redeem.
     """
     sql = """
@@ -95,7 +94,6 @@ def _get_player_global_dimension_balance(
 def _assert_mmv_exists_for_game(db: Session, game_id: int, mmv_id: int) -> None:
     """
     Valida que el id_modifiable_mechanic_videogame exista y pertenezca al juego del path.
-    Evita IntegrityError por FK (redemption_event.fk_re_mmv).
     """
     row = db.execute(
         text(
@@ -129,8 +127,7 @@ def list_videogames(
 ):
     """
     # 13. GET /videogames
-
-    Acceso: abierto a todos.
+    Acceso: todos los roles.
     """
     rows = db.execute(
         text(
@@ -160,8 +157,7 @@ def get_videogame(
 ):
     """
     # 14. GET /videogames/{game_id}
-
-    Acceso: abierto a todos.
+    Acceso: todos los roles.
     """
     row = db.execute(
         text(
@@ -189,13 +185,8 @@ def get_videogame(
     return dict(row)
 
 
-# ---------- Models ----------
-
-
 class VideogameCreateRequest(BaseModel):
-    # Opcional: recomendado NO enviarlo y dejar que MySQL asigne el correlativo
     id_videogame: Optional[int] = None
-
     name: str
     genre: Optional[str] = None
     engine: Optional[str] = None
@@ -206,22 +197,17 @@ class VideogameCreateRequest(BaseModel):
     type: Optional[str] = None
 
 
-# ---------- Videogames ----------
-
-@router.post("", status_code=201, dependencies=[Depends(require_roles(ROLE_ALL))])
+@router.post("", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def create_videogame(
     payload: VideogameCreateRequest,
     db: Session = Depends(get_db),
 ):
     """
     POST /videogames
-    Crea un nuevo videojuego en la tabla `videogame`.
+    Crea un nuevo videojuego.
 
-    Nota: por defecto conviene omitir id_videogame para que sea AUTO_INCREMENT.
-
-    Acceso: abierto a todos.
+    Acceso: admin, researcher.
     """
-    # 1) Validación mínima: evitar duplicados por nombre
     exists = db.execute(
         text(
             """
@@ -258,7 +244,6 @@ def create_videogame(
     }
 
     try:
-        # 2) Insert: con o sin id_videogame (si lo mandas explícito)
         if payload.id_videogame is None:
             result = db.execute(
                 text(
@@ -294,20 +279,11 @@ def create_videogame(
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error creating videogame: {e}")
 
-    # 3) Retornar el registro creado
     row = db.execute(
         text(
             """
             SELECT
-              id_videogame,
-              name,
-              genre,
-              engine,
-              developer,
-              publisher,
-              launch,
-              version,
-              type
+              id_videogame, name, genre, engine, developer, publisher, launch, version, type
             FROM videogame
             WHERE id_videogame = :id
             """
@@ -325,9 +301,7 @@ def get_videogame_mechanics(
 ):
     """
     # 15. GET /videogames/{game_id}/mechanics
-    Combina modifiable_mechanic_videogames + modifiable_mechanic.
-
-    Acceso: abierto a todos.
+    Acceso: todos los roles.
     """
     rows = db.execute(
         text(
@@ -362,12 +336,8 @@ def preview_redeem_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    Preview de canje:
-    - No realiza modificaciones.
-    - Indica si el jugador tiene saldo suficiente
-      y cuál sería el saldo resultante.
-
-    Acceso: abierto a todos.
+    Preview de canje (sin modificaciones).
+    Acceso: player dueño, admin, researcher, teacher.
     """
     _assert_mmv_exists_for_game(db, game_id, payload.modifiable_mechanic_videogame_id)
 
@@ -401,20 +371,14 @@ def redeem_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    Canje robusto:
-      - Verifica saldo por juego+dimensión (points_ledger).
-      - Si no hay saldo suficiente -> 400 con detalle.
-      - Si hay saldo, registra DEBIT en points_ledger (REDEMPTION)
-        y crea el registro en redemption_event.
-
-    Acceso: abierto a todos.
+    Canje robusto con verificación de saldo y transacción atómica.
+    Acceso: player dueño, admin, researcher, teacher.
     """
     from uuid import uuid4
     import json
 
     _assert_mmv_exists_for_game(db, game_id, payload.modifiable_mechanic_videogame_id)
 
-    # 1) Obtener saldo actual (por juego)
     current_balance = _get_player_global_dimension_balance(
         db=db,
         player_id=player_id,
@@ -439,30 +403,16 @@ def redeem_mechanic(
     source_ref = f"REDEMPTION-{uuid4()}"
 
     try:
-        # Inicia transacción explícita
         with db.begin_nested():
-            # 2) Registrar débito en points_ledger
             result = db.execute(
                 text(
                     """
                     INSERT INTO points_ledger (
-                      id_players,
-                      id_point_dimension,
-                      id_videogame,
-                      direction,
-                      amount,
-                      source_type,
-                      source_ref,
-                      payload
+                      id_players, id_point_dimension, id_videogame,
+                      direction, amount, source_type, source_ref, payload
                     ) VALUES (
-                      :id_players,
-                      :id_point_dimension,
-                      :id_videogame,
-                      'DEBIT',
-                      :amount,
-                      'REDEMPTION',
-                      :source_ref,
-                      :payload
+                      :id_players, :id_point_dimension, :id_videogame,
+                      'DEBIT', :amount, 'REDEMPTION', :source_ref, :payload
                     )
                     """
                 ),
@@ -480,18 +430,13 @@ def redeem_mechanic(
             )
             pl_id = result.lastrowid
 
-            # 3) Registrar en redemption_event
             db.execute(
                 text(
                     """
                     INSERT INTO redemption_event (
-                      id_points_ledger,
-                      id_modifiable_mechanic_videogame,
-                      redeemed_points
+                      id_points_ledger, id_modifiable_mechanic_videogame, redeemed_points
                     ) VALUES (
-                      :pl_id,
-                      :mmv_id,
-                      :points
+                      :pl_id, :mmv_id, :points
                     )
                     """
                 ),
@@ -532,13 +477,8 @@ def _get_or_create_player_videogame(
     game_id: int,
     plugin_version: Optional[str],
     settings: Optional[dict],
-    _: CurrentUser = Depends(require_roles(ROLE_ALL)),
 ) -> int:
-    """
-    Ayudante: obtiene id_player_videogame o lo crea.
-
-    Acceso: abierto a todos.
-    """
+    """Obtiene id_player_videogame o lo crea. Helper interno (sin inyección de deps)."""
     import json
 
     row = db.execute(
@@ -551,7 +491,6 @@ def _get_or_create_player_videogame(
     ).mappings().first()
 
     if row:
-        # heartbeat mínimo
         db.execute(
             text("""
                 UPDATE player_videogame
@@ -571,21 +510,10 @@ def _get_or_create_player_videogame(
     result = db.execute(
         text("""
             INSERT INTO player_videogame (
-              id_players,
-              id_videogame,
-              lsg_enabled,
-              first_seen,
-              last_seen,
-              plugin_version,
-              settings
+              id_players, id_videogame, lsg_enabled,
+              first_seen, last_seen, plugin_version, settings
             ) VALUES (
-              :pid,
-              :gid,
-              1,
-              NOW(),
-              NOW(),
-              :plugin_version,
-              :settings
+              :pid, :gid, 1, NOW(), NOW(), :plugin_version, :settings
             )
         """),
         {
@@ -608,9 +536,7 @@ def start_session(
 ):
     """
     # 17. POST /videogames/{game_id}/players/{player_id}/sessions
-    Inicia sesión LSG (lsg_game_session).
-
-    Acceso: abierto a todos.
+    Acceso: player dueño, admin, researcher, teacher.
     """
     import json
 
@@ -629,13 +555,9 @@ def start_session(
             text(
                 """
                 INSERT INTO lsg_game_session (
-                  id_player_videogame,
-                  started_at,
-                  session_metrics
+                  id_player_videogame, started_at, session_metrics
                 ) VALUES (
-                  :pvg_id,
-                  :started_at,
-                  :session_metrics
+                  :pvg_id, :started_at, :session_metrics
                 )
                 """
             ),
@@ -666,9 +588,7 @@ def end_session(
 ):
     """
     # 18. PATCH /videogames/{game_id}/players/{player_id}/sessions/{session_id}/end
-    Cierra la sesión de juego.
-
-    Acceso: abierto a todos.
+    Acceso: player dueño, admin, researcher, teacher.
     """
     ended_at = payload.ended_at or datetime.utcnow()
 
@@ -706,12 +626,16 @@ def end_session(
 
 # ---------- Mechanics ----------
 
-@router.post("/mechanics/catalog", status_code=201, dependencies=[Depends(require_roles(ROLE_ALL))])
+@router.post("/mechanics/catalog", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def create_modifiable_mechanic(
     payload: ModifiableMechanicCreateRequest,
     db: Session = Depends(get_db),
 ):
-    # Evitar duplicado por name (case-insensitive)
+    """
+    POST /videogames/mechanics/catalog
+    Crea una mecánica en el catálogo global.
+    Acceso: admin, researcher.
+    """
     exists = db.execute(
         text("""
             SELECT id_modifiable_mechanic
@@ -763,15 +687,19 @@ def create_modifiable_mechanic(
     return dict(row)
 
 
-@router.post("/{game_id}/mechanics", status_code=201, dependencies=[Depends(require_roles(ROLE_ALL))])
+@router.post("/{game_id}/mechanics", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def attach_mechanic_to_videogame(
     game_id: int,
     payload: ModifiableMechanicVideogameCreateRequest,
     db: Session = Depends(get_db),
 ):
+    """
+    POST /videogames/{game_id}/mechanics
+    Asocia una mecánica al catálogo de un videojuego.
+    Acceso: admin, researcher.
+    """
     import json
 
-    # Verificar que exista el juego
     vg = db.execute(
         text("SELECT 1 FROM videogame WHERE id_videogame = :gid"),
         {"gid": game_id},
@@ -779,7 +707,6 @@ def attach_mechanic_to_videogame(
     if not vg:
         raise HTTPException(status_code=404, detail="Videogame not found")
 
-    # Verificar que exista la mecánica
     mech = db.execute(
         text("SELECT 1 FROM modifiable_mechanic WHERE id_modifiable_mechanic = :mid"),
         {"mid": payload.id_modifiable_mechanic},
@@ -787,7 +714,6 @@ def attach_mechanic_to_videogame(
     if not mech:
         raise HTTPException(status_code=404, detail="Modifiable mechanic not found")
 
-    # Evitar duplicado (misma mecánica asociada al mismo juego)
     exists = db.execute(
         text("""
             SELECT id_modifiable_mechanic_videogame
@@ -845,14 +771,7 @@ def connect_player_videogame(
 ):
     """
     POST /videogames/{game_id}/players/{player_id}/connect
-
-    Upsert vínculo player<->videogame y actualiza heartbeat:
-    - lsg_enabled
-    - plugin_version
-    - settings
-    - first_seen (solo si es nuevo)
-    - last_seen (siempre)
-
+    Upsert vínculo player<->videogame con heartbeat.
     Acceso: player dueño, admin, researcher, teacher.
     """
     import json
@@ -861,32 +780,20 @@ def connect_player_videogame(
     settings_json = json.dumps(payload.settings) if payload.settings is not None else None
 
     try:
-        # 1) Upsert con heartbeat
         db.execute(
             text(
                 """
                 INSERT INTO player_videogame (
-                  id_players,
-                  id_videogame,
-                  lsg_enabled,
-                  first_seen,
-                  last_seen,
-                  plugin_version,
-                  settings
+                  id_players, id_videogame, lsg_enabled,
+                  first_seen, last_seen, plugin_version, settings
                 ) VALUES (
-                  :pid,
-                  :gid,
-                  :enabled,
-                  NOW(),
-                  NOW(),
-                  :plugin_version,
-                  :settings
+                  :pid, :gid, :enabled, NOW(), NOW(), :plugin_version, :settings
                 )
                 ON DUPLICATE KEY UPDATE
-                  lsg_enabled = VALUES(lsg_enabled),
-                  last_seen = NOW(),
+                  lsg_enabled    = VALUES(lsg_enabled),
+                  last_seen      = NOW(),
                   plugin_version = COALESCE(VALUES(plugin_version), plugin_version),
-                  settings = COALESCE(VALUES(settings), settings)
+                  settings       = COALESCE(VALUES(settings), settings)
                 """
             ),
             {

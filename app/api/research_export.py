@@ -23,10 +23,6 @@ from app.security import (
 router = APIRouter(prefix="/research/export", tags=["research-export"])
 
 
-# ==========
-# Helpers
-# ==========
-
 RESEARCH_PSEUDONYM_SALT = os.getenv("RESEARCH_PSEUDONYM_SALT", "change-me-for-prod")
 
 
@@ -37,14 +33,10 @@ def decode_ts(v: Any) -> Any:
 
 
 def _pseudonymize_player(player_id: Optional[int]) -> Optional[str]:
-    """
-    Genera un ID seudonimizado estable para un player_id dado,
-    usando un salt definido en RESEARCH_PSEUDONYM_SALT.
-    """
+    """Genera un ID seudonimizado estable usando RESEARCH_PSEUDONYM_SALT."""
     if player_id is None:
         return None
     base = f"{RESEARCH_PSEUDONYM_SALT}:{player_id}".encode("utf-8")
-    # recortamos para que sea manejable
     return hashlib.sha256(base).hexdigest()[:16]
 
 
@@ -52,45 +44,32 @@ def _apply_pseudonymization(
     rows: List[Dict[str, Any]],
     include_raw_ids: bool,
 ) -> List[Dict[str, Any]]:
-    """
-    Agrega la columna player_pseudo y opcionalmente elimina id_players,
-    player_name y player_email.
-    """
+    """Agrega player_pseudo y opcionalmente elimina id_players, player_name, player_email."""
     out: List[Dict[str, Any]] = []
-
     for r in rows:
         r = dict(r)
         pid = r.get("id_players")
         r["player_pseudo"] = _pseudonymize_player(pid)
-
         if not include_raw_ids:
             r.pop("id_players", None)
             r.pop("player_name", None)
             r.pop("player_email", None)
-
         out.append(r)
-
     return out
 
 
 def _build_csv_response(rows: List[Dict[str, Any]], filename: str) -> Response:
-    """
-    Convierte una lista de dicts en CSV (texto) y devuelve un Response.
-    """
+    """Convierte lista de dicts a CSV y retorna Response."""
     buf = io.StringIO()
-
     if not rows:
-        # CSV solo con cabecera vacía
         buf.write("")
     else:
         fieldnames = list(rows[0].keys())
         writer = csv.DictWriter(buf, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
-
     content = buf.getvalue()
     buf.close()
-
     return Response(
         content=content,
         media_type="text/csv",
@@ -98,11 +77,7 @@ def _build_csv_response(rows: List[Dict[str, Any]], filename: str) -> Response:
     )
 
 
-# =========================
-# 1) Export: Points ledger
-# =========================
-
-@router.get("/points", dependencies=[Depends(require_roles(ROLE_ALL))])
+@router.get("/points", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_points(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (inicio ventana tiempo, opcional)"
@@ -110,36 +85,17 @@ def export_points(
     to_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (fin ventana tiempo, opcional)"
     ),
-    player_id: Optional[int] = Query(
-        None, description="Filtra por id_players (opcional)"
-    ),
-    videogame_id: Optional[int] = Query(
-        None, description="Filtra por id_videogame (opcional)"
-    ),
-    source_type: Optional[str] = Query(
-        None, description="Filtra por source_type (opcional, ej. SENSOR, REDEMPTION)"
-    ),
-    format: str = Query(
-        "json", pattern="^(json|csv)$", description="Formato de salida: json o csv"
-    ),
-    include_raw_ids: bool = Query(
-        False,
-        description="Si es false, elimina id_players / nombre/email del export",
-    ),
-    limit: Optional[int] = Query(
-        None, ge=1, le=100000, description="Límite máximo de filas (opcional)"
-    ),
+    player_id: Optional[int] = Query(None, description="Filtra por id_players (opcional)"),
+    videogame_id: Optional[int] = Query(None, description="Filtra por id_videogame (opcional)"),
+    source_type: Optional[str] = Query(None, description="Filtra por source_type (ej. SENSOR, REDEMPTION)"),
+    format: str = Query("json", pattern="^(json|csv)$", description="Formato: json o csv"),
+    include_raw_ids: bool = Query(False, description="Si false, elimina id_players/nombre/email"),
+    limit: Optional[int] = Query(None, ge=1, le=100000, description="Límite máximo de filas"),
     db: Session = Depends(get_db),
-    _: CurrentUser = Depends(require_roles(["admin", "researcher", "teacher", "player"])),
 ):
     """
-    Exporta movimientos de puntos (points_ledger) con contexto mínimo
-    para análisis de investigación.
-
-    Incluye:
-    - info básica de points_ledger
-    - info de jugador (opcionalmente seudonimizada)
-    - info de videojuego y point_dimension
+    Exporta movimientos de puntos (points_ledger) para análisis de investigación.
+    Incluye seudonimización de identidad del jugador.
 
     Acceso: admin, researcher.
     """
@@ -208,10 +164,6 @@ def export_points(
     return {"items": data, "count": len(data)}
 
 
-# =========================
-# 2) Export: Game sessions
-# =========================
-
 @router.get("/sessions", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_sessions(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
@@ -220,32 +172,15 @@ def export_sessions(
     to_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (fin ventana tiempo, opcional)"
     ),
-    player_id: Optional[int] = Query(
-        None, description="Filtra por id_players (opcional)"
-    ),
-    videogame_id: Optional[int] = Query(
-        None, description="Filtra por id_videogame (opcional)"
-    ),
-    format: str = Query(
-        "json", pattern="^(json|csv)$", description="Formato de salida: json o csv"
-    ),
-    include_raw_ids: bool = Query(
-        False,
-        description="Si es false, elimina id_players / nombre/email del export",
-    ),
-    limit: Optional[int] = Query(
-        None, ge=1, le=100000, description="Límite máximo de filas (opcional)"
-    ),
+    player_id: Optional[int] = Query(None, description="Filtra por id_players (opcional)"),
+    videogame_id: Optional[int] = Query(None, description="Filtra por id_videogame (opcional)"),
+    format: str = Query("json", pattern="^(json|csv)$", description="Formato: json o csv"),
+    include_raw_ids: bool = Query(False, description="Si false, elimina id_players/nombre/email"),
+    limit: Optional[int] = Query(None, ge=1, le=100000, description="Límite máximo de filas"),
     db: Session = Depends(get_db),
 ):
     """
-    Exporta sesiones de juego (lsg_game_session + player_videogame + videogame + players).
-
-    Incluye:
-    - info de sesión (started_at, ended_at, duration_seconds)
-    - info de videojuego
-    - info de jugador (seudonimizada)
-
+    Exporta sesiones de juego (lsg_game_session + player_videogame + players).
     Acceso: admin, researcher.
     """
     base = """
@@ -304,10 +239,6 @@ def export_sessions(
     return {"items": data, "count": len(data)}
 
 
-# =========================
-# 3) Export: Sensor ingest
-# =========================
-
 @router.get("/sensors", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_sensors(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
@@ -316,35 +247,16 @@ def export_sensors(
     to_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (fin ventana tiempo, opcional)"
     ),
-    player_id: Optional[int] = Query(
-        None, description="Filtra por id_players (opcional)"
-    ),
-    sensor_endpoint_id: Optional[int] = Query(
-        None, description="Filtra por id_sensor_endpoint (opcional)"
-    ),
-    format: str = Query(
-        "json", pattern="^(json|csv)$", description="Formato de salida: json o csv"
-    ),
-    include_raw_ids: bool = Query(
-        False,
-        description="Si es false, elimina id_players / nombre/email del export",
-    ),
-    limit: Optional[int] = Query(
-        None, ge=1, le=100000, description="Límite máximo de filas (opcional)"
-    ),
+    player_id: Optional[int] = Query(None, description="Filtra por id_players (opcional)"),
+    sensor_endpoint_id: Optional[int] = Query(None, description="Filtra por id_sensor_endpoint"),
+    format: str = Query("json", pattern="^(json|csv)$", description="Formato: json o csv"),
+    include_raw_ids: bool = Query(False, description="Si false, elimina id_players/nombre/email"),
+    limit: Optional[int] = Query(None, ge=1, le=100000, description="Límite máximo de filas"),
     db: Session = Depends(get_db),
 ):
     """
-    Exporta eventos de sensor (sensor_ingest_event) con contexto:
-
-    - datos de ingest (status, parsed_value, raw_payload opcional si decides mantenerlo)
-    - info de jugador (seudonimizada)
-    - info de sensor_endpoint
-
-    Nota ética:
-    - Considera si quieres exportar `raw_payload` completo o solo métricas derivadas
-      (según CEI / protocolo). Aquí lo incluimos tal cual existe en la tabla.
-
+    Exporta eventos de sensor (sensor_ingest_event) con contexto.
+    Nota ética: incluye raw_payload tal como existe en la tabla.
     Acceso: admin, researcher.
     """
     base = """
