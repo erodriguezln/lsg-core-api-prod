@@ -11,6 +11,7 @@ from app.db import get_db
 from app.security import (
     require_roles,
     guard_player_access,
+    get_current_user,
     CurrentUser,
     ROLE_ALL,
 )
@@ -139,18 +140,32 @@ def get_player_sensors(
     return list(rows)
 
 
-@router.post("/ingest/webhook", dependencies=[Depends(require_roles(ROLE_ALL))])
+@router.post("/ingest/webhook")
 def ingest_sensor_event(
     payload: SensorIngestRequest,
     db: Session = Depends(get_db),
+    current: CurrentUser = Depends(get_current_user),
 ):
     """
     # 22. POST /sensors/ingest/webhook
-    MVP: inserta en sensor_ingest_event (sin lógica de conversión a puntos aún).
+    Inserta evento de sensor en sensor_ingest_event.
 
-    Acceso: admin, researcher.
+    **Acceso:** todos los roles autenticados.
+    - : solo puede ingestar datos de su propio player_id.
+    - : pueden ingestar para cualquier player_id.
     """
     import json
+
+    elevated = {"admin", "researcher", "teacher"}
+    if not any(r in elevated for r in current.roles):
+        if current.player_id is None or current.player_id != payload.player_id:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code":    "PLAYER_ACCESS_DENIED",
+                    "message": "Solo puedes ingestar datos de sensor para tu propio player_id.",
+                },
+            )
 
     occurred_at = payload.occurred_at or datetime.utcnow()
 

@@ -10,6 +10,7 @@ from app.db import get_db
 from app.security import (
     require_roles,
     guard_player_access,
+    get_current_user,
     CurrentUser,
     ROLE_ALL,
 )
@@ -34,9 +35,18 @@ def list_players(
     items = db.execute(
         text(
             """
-            SELECT id_players, name, email, age, created_at
-            FROM players
-            ORDER BY id_players
+            SELECT
+              p.id_players,
+              p.name,
+              p.email,
+              p.age,
+              p.created_at,
+              GROUP_CONCAT(pr.role ORDER BY pr.assigned_at SEPARATOR ",") AS roles
+            FROM players p
+            LEFT JOIN player_roles pr
+              ON pr.id_players = p.id_players AND pr.revoked_at IS NULL
+            GROUP BY p.id_players, p.name, p.email, p.age, p.created_at
+            ORDER BY p.id_players
             LIMIT :limit OFFSET :offset
             """
         ),
@@ -47,8 +57,14 @@ def list_players(
         text("SELECT COUNT(*) AS cnt FROM players")
     ).scalar_one()
 
+    items_out = []
+    for row in items:
+        r = dict(row)
+        r["roles"] = r["roles"].split(",") if r.get("roles") else []
+        items_out.append(r)
+
     return {
-        "items": list(items),
+        "items": items_out,
         "page": page,
         "page_size": page_size,
         "total": total,
@@ -69,9 +85,19 @@ def get_player(
     row = db.execute(
         text(
             """
-            SELECT id_players, name, email, age, created_at, updated_at
-            FROM players
-            WHERE id_players = :player_id
+            SELECT
+              p.id_players,
+              p.name,
+              p.email,
+              p.age,
+              p.created_at,
+              p.updated_at,
+              GROUP_CONCAT(pr.role ORDER BY pr.assigned_at SEPARATOR ",") AS roles
+            FROM players p
+            LEFT JOIN player_roles pr
+              ON pr.id_players = p.id_players AND pr.revoked_at IS NULL
+            WHERE p.id_players = :player_id
+            GROUP BY p.id_players, p.name, p.email, p.age, p.created_at, p.updated_at
             """
         ),
         {"player_id": player_id},
@@ -80,7 +106,9 @@ def get_player(
     if not row:
         raise HTTPException(status_code=404, detail="Player not found")
 
-    return dict(row)
+    result = dict(row)
+    result["roles"] = result["roles"].split(",") if result.get("roles") else []
+    return result
 
 
 @router.delete("/{player_id}", dependencies=[Depends(require_roles(["admin"]))])
@@ -331,14 +359,12 @@ def get_player_timeline(
             }
         )
 
-    # Ordenamos todos los eventos por fecha descendente
     events_sorted = sorted(
         events,
         key=lambda e: e["occurred_at"] or datetime.min,
         reverse=True,
     )
 
-    # Cortamos al límite global
     events_sorted = events_sorted[:limit]
 
     return {

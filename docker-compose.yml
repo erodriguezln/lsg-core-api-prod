@@ -2,9 +2,11 @@ version: "3.9"
 
 networks:
   lsg_shared:
-     external: true
+    external: true
 
 services:
+
+  # MySQL 8
   db:
     image: mysql:8.0
     container_name: lsg_db
@@ -14,11 +16,15 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-    # En DIINF NO exponemos el puerto de MySQL hacia fuera
+    # Puerto MySQL NO expuesto hacia el host en DIINF (acceso solo interno)
     # ports:
     #   - "${DB_HOST_PORT:-3307}:3306"
     volumes:
       - db_data:/var/lib/mysql
+      # docker-entrypoint-initdb.d ejecuta *.sql en orden alfabético
+      # al crear el volumen por primera vez (docker compose up -v):
+      #   01_db_lsg_dump.sql    ← schema base + datos semilla
+      #   02_migrations.sql     ← PATCH-01 a 06 (player_roles, IC², offline, etc.)
       - ./db/init:/docker-entrypoint-initdb.d
     command: >
       --default-authentication-plugin=mysql_native_password
@@ -26,6 +32,7 @@ services:
     networks:
       - lsg_shared
 
+  # LSG Core API
   api:
     build: .
     container_name: lsg_core_api
@@ -33,17 +40,19 @@ services:
     depends_on:
       - db
     environment:
+      # BD
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
 
-      APP_ENV: prod
-      API_VERSION: "1.1.0"
+      # Metadata
+      APP_ENV: production
+      API_VERSION: "1.2.0"
       GIT_COMMIT: "diinf-deploy"
 
-      # Seguridad (integrado con LSG-auth)
+      # JWT / Auth
       AUTH_OPEN_ALL: "false"
       AUTH_DISABLED: "false"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
@@ -51,10 +60,18 @@ services:
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER}
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE}
 
+      # FastAPI root path
+      LSG_CORE_API_ROOT_PATH: ${LSG_CORE_API_ROOT_PATH:-/lsg-core-api}
+
+      # Research / Exportación
+      RESEARCH_PSEUDONYM_SALT: ${RESEARCH_PSEUDONYM_SALT}
+
+      # Offline points
+      OFFLINE_SYNC_MAX_AGE_DAYS: ${OFFLINE_SYNC_MAX_AGE_DAYS:-30}
+
     env_file:
       - .env
-    # En prod no montamos el código del host como volumen
-    # (evitamos cambios accidentales en caliente)
+    # No montamos código del host como volumen
     # volumes:
     #   - .:/app
     working_dir: /app

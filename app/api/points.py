@@ -10,6 +10,7 @@ from app.db import get_db
 from app.security import (
     require_roles,
     guard_player_access,
+    get_current_user,
     CurrentUser,
     ROLE_ALL,
 )
@@ -158,7 +159,7 @@ def get_player_attribute_points(
     return list(rows)
 
 
-@router.get("/points/ledger", tags=["points"], dependencies=[Depends(require_roles(ROLE_ALL))])
+@router.get("/points/ledger", tags=["points"])
 def get_points_ledger(
     player_id: Optional[int] = Query(None),
     videogame_id: Optional[int] = Query(None),
@@ -166,13 +167,21 @@ def get_points_ledger(
     from_ts: Optional[str] = Query(None, description="YYYY-MM-DD HH:MM:SS"),
     to_ts: Optional[str] = Query(None, description="YYYY-MM-DD HH:MM:SS"),
     db: Session = Depends(get_db),
+    current: CurrentUser = Depends(get_current_user),
 ):
     """
     # 11. GET /points/ledger
     Consulta filtrable del ledger de puntos.
 
-    Acceso: admin, researcher, teacher, player.
+    **Acceso:** todos los roles autenticados.
+    - : forzado a ver solo su propio ledger (player_id ignorado del query).
+    - : pueden filtrar por cualquier player_id.
     """
+    elevated = {"admin", "researcher", "teacher"}
+    if not any(r in elevated for r in current.roles):
+        if current.player_id is None:
+            raise HTTPException(status_code=403, detail="No se puede determinar tu player_id desde el token.")
+        player_id = current.player_id
     base = """
         SELECT
           id_points_ledger,
