@@ -817,3 +817,161 @@ def connect_player_videogame(
         "lsg_enabled": bool(enabled_val),
         "plugin_version": payload.plugin_version,
     }
+
+# ---------- Bulk mechanics ----------
+
+class BulkMechanicItem(BaseModel):
+    """Una mecánica del lote: crea en catálogo si no existe, luego vincula al juego."""
+    name:        str
+    description: Optional[str] = None
+    type:        Optional[str] = None
+    options:     Optional[dict] = None   # JSON de opciones para modifiable_mechanic_videogames
+
+
+class BulkMechanicsRequest(BaseModel):
+    mechanics: list = []   # List[BulkMechanicItem], validado abajo
+
+
+class BulkMechanicResult(BaseModel):
+    name:                              str
+    status:                            str   # "created", "existing", "error"
+    id_modifiable_mechanic:            Optional[int] = None
+    id_modifiable_mechanic_videogame:  Optional[int] = None
+    detail:                            Optional[str] = None
+
+
+@router.post(
+    "/{game_id}/mechanics/bulk",
+    status_code=207,
+    summary="Carga masiva de mecánicas para un videojuego",
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
+)
+def bulk_attach_mechanics(
+    game_id: int,
+    body: BulkMechanicsRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Vincula un lote de mecánicas a un videojuego.
+
+    Por cada ítem del lote:
+    - Si la mecánica (por nombre exacto) no existe en el catálogo → la crea.
+    - Vincula la mecánica al juego en `modifiable_mechanic_videogames`.
+    - Si el vínculo ya existe → lo omite (idempotente).
+
+    Retorna HTTP 207 con el resultado por ítem.
+
+    **Acceso:** admin, researcher.
+
+    **cURL de ejemplo (Terraria con 2 mecánicas):**
+    ```bash
+    curl -X POST '/lsg-core-api/videogames/8/mechanics/bulk' \\
+      -H 'Authorization: Bearer <TOKEN>' \\
+      -H 'Content-Type: application/json' \\
+      -d '{"mechanics":[
+            {"name":"Faster Attack Speed","description":"Aumenta velocidad","type":"buff","options":{"multiplier":1.1}},
+            {"name":"Reduced Enemy HP","description":"Reduce HP enemigos","type":"nerf","options":{"reduction":0.15}}
+          ]}'
+    ```
+    """
+    import json as _json
+
+    # Verificar que el juego existe
+    vg = db.execute(
+        text("SELECT 1 FROM videogame WHERE id_videogame = :gid"),
+        {"gid": game_id},
+    ).mappings().first()
+    if not vg:
+        raise HTTPException(status_code=404, detail="Videogame not found")
+
+    mechanics = body.mechanics
+    if not mechanics:
+        raise HTTPException(status_code=400, detail="El lote de mecánicas está vacío")
+
+    results: list = []
+
+    for item in mechanics:
+        # Soporte tanto dict como BulkMechanicItem
+        if isinstance(item, dict):
+            name        = item.get("name", "")
+            description = item.get("description")
+            mtype       = item.get("type")
+            options     = item.get("options")
+        else:
+            name        = item.name
+            description = item.description
+            mtype       = item.type
+            options     = item.options
+
+        if not name:
+            results.append({"name": "", "status": "error",
+                            "detail": "Campo 'name' requerido"})
+            continue
+
+        try:
+            # 1. Buscar mecánica existente (match exacto por name)
+            existing_mech = db.execute(
+                text("""SELECT id_modifiable_mechanic FROM modifiable_mechanic
+                        WHERE name = :name LIMIT 1"""),
+                {"name": name},
+            ).mappings().first()
+
+            if existing_mech:
+                mm_id  = existing_mech["id_modifiable_mechanic"]
+                status = "existing"
+            else:
+                # Crear en catálogo
+                res = db.execute(
+                    text("""INSERT INTO modifiable_mechanic (name, description, type)
+                            VALUES (:name, :desc, :type)"""),
+                    {"name": name, "desc": description, "type": mtype},
+                )
+                mm_id  = res.lastrowid
+                status = "created"
+
+            # 2. Vincular al juego (ignorar si ya existe)
+            existing_link = db.execute(
+                text("""SELECT id_modifiable_mechanic_videogame
+                        FROM modifiable_mechanic_videogames
+                        WHERE id_videogame=:gid AND id_modifiable_mechanic=:mid
+                        LIMIT 1"""),
+                {"gid": game_id, "mid": mm_id},
+            ).mappings().first()
+
+            if existing_link:
+                mmv_id = existing_link["id_modifiable_mechanic_videogame"]
+            else:
+                res2 = db.execute(
+                    text("""INSERT INTO modifiable_mechanic_videogames
+                              (id_videogame, id_modifiable_mechanic, options)
+                            VALUES (:gid, :mid, :opts)"""),
+                    {
+                        "gid":  game_id,
+                        "mid":  mm_id,
+                        "opts": _json.dumps(options) if options else None,
+                    },
+                )
+                mmv_id = res2.lastrowid
+
+            db.commit()
+            results.append({
+                "name":                             name,
+                "status":                           status,
+                "id_modifiable_mechanic":           mm_id,
+                "id_modifiable_mechanic_videogame": mmv_id,
+            })
+
+        except Exception as e:
+            db.rollback()
+            results.append({"name": name, "status": "error", "detail": str(e)})
+
+    synced  = sum(1 for r in results if r.get("status") in ("created", "existing"))
+    errored = sum(1 for r in results if r.get("status") == "error")
+
+    return {
+        "game_id":  game_id,
+        "total":    len(results),
+        "synced":   synced,
+        "errors":   errored,
+        "results":  results,
+    }

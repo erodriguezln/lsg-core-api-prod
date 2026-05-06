@@ -2,9 +2,11 @@ from typing import Optional, List
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+import json
 
 from app.db import get_db
 from app.security import (
@@ -16,17 +18,12 @@ from app.security import (
 
 router = APIRouter(prefix="/admin", tags=["admin-config"])
 
-
-# =========================
-# Pydantic models
-# =========================
-
 # --- Attributes ---
 
 class AttributeBase(BaseModel):
     name: str
     description: Optional[str] = None
-    data_type: Optional[str] = None  # según tu esquema (ej: "int", "float", "json")
+    data_type: Optional[str] = None
 
 
 class AttributeCreate(AttributeBase):
@@ -69,20 +66,20 @@ class PointDimensionBase(BaseModel):
     code: str
     name: str
 
-    @root_validator(skip_on_failure=True)
-    def validate_linked_entity(cls, values):
+    @model_validator(mode="after")
+    def validate_linked_entity(self):
         """
         La tabla point_dimension tiene un CHECK que exige
         que se relacione a un atributo o a un subatributo, pero no ambos.
         """
-        attr = values.get("id_attributes")
-        sub = values.get("id_subattributes")
+        attr = self.id_attributes
+        sub  = self.id_subattributes
 
         if (attr is None and sub is None) or (attr is not None and sub is not None):
             raise ValueError(
                 "Debe indicar exactamente uno de id_attributes o id_subattributes"
             )
-        return values
+        return self
 
 
 class PointDimensionCreate(PointDimensionBase):
@@ -95,16 +92,15 @@ class PointDimensionUpdate(BaseModel):
     code: Optional[str] = None
     name: Optional[str] = None
 
-    @root_validator(skip_on_failure=True)
-    def validate_linked_entity(cls, values):
-        # Si el update toca alguno de los dos, validamos que queden en estado coherente.
-        attr = values.get("id_attributes")
-        sub = values.get("id_subattributes")
+    @model_validator(mode="after")
+    def validate_linked_entity(self):
+        attr = self.id_attributes
+        sub  = self.id_subattributes
         if attr is not None and sub is not None:
             raise ValueError(
                 "No puede establecer id_attributes e id_subattributes simultáneamente"
             )
-        return values
+        return self
 
 
 # --- Modifiable Mechanic ---
@@ -112,7 +108,7 @@ class PointDimensionUpdate(BaseModel):
 class ModifiableMechanicBase(BaseModel):
     name: str
     description: Optional[str] = None
-    type: Optional[str] = None  # por ejemplo: "SPEED", "XP_RATE", etc.
+    type: Optional[str] = None
 
 
 class ModifiableMechanicCreate(ModifiableMechanicBase):
@@ -130,7 +126,7 @@ class ModifiableMechanicUpdate(BaseModel):
 class ModifiableMechanicVGBase(BaseModel):
     id_videogame: int
     id_modifiable_mechanic: int
-    options: Optional[dict] = None  # la tabla usa JSON; se serializa en SQL
+    options: Optional[dict] = None
 
 
 class ModifiableMechanicVGCreate(ModifiableMechanicVGBase):
@@ -272,7 +268,7 @@ def admin_update_attribute(
 
     Acceso: admin.
     """
-    # Verificamos existencia
+
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -325,7 +321,6 @@ def admin_delete_attribute(
 
     Acceso: admin.
     """
-    # Verificamos existencia
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -341,7 +336,6 @@ def admin_delete_attribute(
         db.commit()
     except Exception as e:
         db.rollback()
-        # conflicto con FKs, etc.
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Error deleting attribute (probably in use): {e}",
@@ -430,7 +424,6 @@ def admin_create_subattribute(
 
     Acceso: admin.
     """
-    # Aseguramos que el atributo exista
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -497,7 +490,6 @@ def admin_update_subattribute(
     params = {"id": sub_id}
 
     if payload.attribute_id is not None:
-        # validar existencia del atributo nuevo
         _ensure_exists(
             db,
             "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -648,7 +640,6 @@ def admin_create_point_dimension(
 
     Acceso: admin.
     """
-    # Validamos FKs si se entregan
     if payload.id_attributes is not None:
         _ensure_exists(
             db,
@@ -733,7 +724,6 @@ def admin_update_point_dimension(
         )
         fields.append("id_attributes = :id_attributes")
         params["id_attributes"] = payload.id_attributes
-        # si cambiamos a atributo, anulamos subatributo
         fields.append("id_subattributes = NULL")
 
     if payload.id_subattributes is not None:
@@ -745,7 +735,6 @@ def admin_update_point_dimension(
         )
         fields.append("id_subattributes = :id_subattributes")
         params["id_subattributes"] = payload.id_subattributes
-        # si cambiamos a subatributo, anulamos atributo
         fields.append("id_attributes = NULL")
 
     if payload.code is not None:
@@ -1095,9 +1084,6 @@ def admin_create_mod_mech_vg(
 
     Acceso: admin.
     """
-    import json
-
-    # Validamos FKs
     _ensure_exists(
         db,
         "SELECT id_videogame FROM videogame WHERE id_videogame = :id",
@@ -1159,8 +1145,6 @@ def admin_update_mod_mech_vg(
 
     Acceso: admin.
     """
-    import json
-
     _ensure_exists(
         db,
         "SELECT id_modifiable_mechanic_videogame FROM modifiable_mechanic_videogames WHERE id_modifiable_mechanic_videogame = :id",

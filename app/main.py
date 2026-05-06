@@ -13,6 +13,8 @@ from app.api import (
     admin_points,
     research_export,
 )
+from app.api import ic2      
+from app.api import offline  
 
 ROOT_PATH = os.getenv("LSG_CORE_API_ROOT_PATH", "")
 
@@ -30,14 +32,19 @@ CORE_DOCS_DESCRIPTION = """
    - Pega: `Bearer <access_token>`
 
 3. **Todos los endpoints requieren JWT válido.**
-   Los roles determinan el nivel de acceso:
 
    | Rol | Acceso |
    |---|---|
-   | `player` | Solo sus propios datos, canjes y sesiones |
+   | `player` | Solo sus propios datos, canjes, sesiones e IC² |
    | `teacher` | Lectura de todos los jugadores y analíticas |
-   | `researcher` | Todo lo de teacher + ajuste de puntos y exportación |
+   | `researcher` | Todo lo de teacher + ajuste de puntos, exportación e IC² ajeno |
    | `admin` | Acceso completo, incluyendo configuración del sistema |
+
+4. **IC² LSG** (`/ic2`): calcula el Índice Compuesto Físico-Mental a partir de
+   estrategias de normalización y reglas de mecánica.
+
+5. **Puntos offline** (`/offline`): sincroniza eventos generados sin conexión.
+   Ventana máxima: 30 días. Idempotencia por `client_ref`.
 
 Fuente:
 - González-Ibáñez, R., Macías-Cáceres, J., Villalta-Paucar, M. (2025).
@@ -48,12 +55,12 @@ Fuente:
 
 app = FastAPI(
     title="LifeSync-Games Core API",
-    version="1.1.0",
+    version="1.2.0",
     root_path=ROOT_PATH,
     description=CORE_DOCS_DESCRIPTION,
 )
 
-# ── Routers ────────────────────────────────────────────────────────────────────
+# Routers existentes
 
 app.include_router(health.router)
 
@@ -65,6 +72,9 @@ app.include_router(sensors.router,   prefix="/sensors",    tags=["sensors"])
 app.include_router(analytics.router, prefix="/analytics",  tags=["analytics"])
 app.include_router(meta.router,      prefix="/meta",        tags=["meta"])
 
-app.include_router(admin_config.router)   # prefix="/admin" ya incluido
-app.include_router(admin_points.router)   # prefix="/admin/points" ya incluido
-app.include_router(research_export.router)  # prefix="/research/export" ya incluido
+app.include_router(admin_config.router)     # prefix="/admin" incluido
+app.include_router(admin_points.router)     # prefix="/admin/points" incluido
+app.include_router(research_export.router)  # prefix="/research/export" incluido
+
+app.include_router(ic2.router,     prefix="/ic2",     tags=["ic2"])
+app.include_router(offline.router, prefix="/offline", tags=["offline"])
