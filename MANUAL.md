@@ -616,6 +616,10 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/players/46/link' \
 
 **Roles:** admin, researcher
 
+> **`schedule_time`**: entero en formato HHMM (hora × 100 + minutos).  
+> Ejemplos: `800` = 08:00 | `1430` = 14:30 | `null` = sin horario fijo (default).  
+> Enviar `null` si no necesitas programar una hora de ingesta.
+
 ```bash
 curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/players/46/link-endpoint' \
   -H 'Authorization: Bearer <token>' \
@@ -623,7 +627,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/players/46/link-en
   -d '{
     "sensor_endpoint_id": 3,
     "activated": true,
-    "schedule_time": "08:00"
+    "schedule_time": 800
   }'
 ```
 
@@ -676,7 +680,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/ingest/webhook' \
 
 El IC² LSG es el núcleo científico del sistema. Convierte señales reales del participante (actividad física, calidad del sueño, rendimiento cognitivo) en un índice numérico [0,1] que determina las mecánicas activas en el videojuego.
 
-**Versión de goalposts activa:** `v1.0-SCCC2026` (Macías-Cáceres et al., SCCC 2026)
+**Versión de goalposts activa:** `v1.0`
 
 ---
 
@@ -687,7 +691,7 @@ El IC² LSG es el núcleo científico del sistema. Convierte señales reales del
 **Roles:** todos
 
 ```bash
-curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/ic2/goalposts?version_tag=v1.0-SCCC2026' \
+curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/ic2/goalposts?version_tag=v1.0' \
   -H 'Authorization: Bearer <token>'
 ```
 
@@ -720,7 +724,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/ic2/compute' \
   -H 'Content-Type: application/json' \
   -d '{
     "player_id": 46,
-    "version_tag": "v1.0-SCCC2026",
+    "version_tag": "v1.0",
     "experiment_tag": "LSG_C1_T1_CV",
     "session_time_minutes": 45,
     "signals": {
@@ -740,7 +744,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/ic2/compute' \
 ```json
 {
   "player_id": 46,
-  "version_tag": "v1.0-SCCC2026",
+  "version_tag": "v1.0",
   "window": {"start": "2026-05-01", "end": "2026-05-07"},
   "indices": {
     "Icf": 0.7234,
