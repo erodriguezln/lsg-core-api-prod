@@ -15,12 +15,14 @@ from app.security import CurrentUser, get_current_user
 
 router = APIRouter()
 
-T_MAX_MINUTES = 90.0    # límite de sesión para IAR
+# Constantes del modelo
+
+T_MAX_MINUTES = 90.0    # límite de sesión para IAR (paper Sección III.C)
 IAR_W1        = 0.6     # peso IC_LSG en IAR
 IAR_W2        = 0.4     # peso tiempo en IAR (w1+w2=1)
 WINDOW_DAYS   = 7       # ventana temporal del índice
 
-# Schemas 
+# Schemas
 
 class RawSignals(BaseModel):
     """
@@ -41,7 +43,7 @@ class IC2ComputeRequest(BaseModel):
     player_id:            int
     version_tag:          str            = "v1.0"
     experiment_tag:       Optional[str]  = None
-    session_time_minutes: Optional[float] = None
+    session_time_minutes: Optional[float] = None   # para IAR (Ec.8)
     signals:              RawSignals
 
 
@@ -53,7 +55,6 @@ class IC2ComputeResponse(BaseModel):
     rules_triggered: List[str]
     admissibility:   Dict[str, bool]
     id_ic2_result:   int
-
 
 # Normalización F1-F4
 
@@ -98,7 +99,7 @@ def _arith_mean(*vals: Optional[float]) -> Optional[float]:
 
 
 def _geo_mean(*vals: Optional[float]) -> Optional[float]:
-    """Promedio geométrico sin ponderación (Ec.5-7). None si todos son None."""
+    """Promedio geométrico sin ponderación. None si todos son None."""
     valid = [v for v in vals if v is not None]
     if not valid:
         return None
@@ -126,7 +127,6 @@ def _evaluate_rules(IC_fis: Optional[float], IC_ment: Optional[float],
         rules.append("R6")
     return rules
 
-
 # Endpoints
 
 @router.post("/compute", response_model=IC2ComputeResponse,
@@ -137,9 +137,9 @@ def compute_ic2(
     current: CurrentUser = Depends(get_current_user),
 ):
     """
-    Recibe señales crudas, normaliza con F1-F4 (Ec.1-4), agrega con
-    promedio geométrico (Ec.5-7) y calcula IAR (Ec.8).
-    Persiste en `ic2_result` e `interaction_logs` (trazabilidad FONDECYT).
+    Recibe señales crudas, normaliza con F1-F4, agrega con
+    promedio geométrico y calcula IAR.
+    Persiste en `ic2_result` e `interaction_logs`.
 
     **Acceso:**
     - `player`: solo su propio IC².
@@ -170,7 +170,8 @@ def compute_ic2(
             detail=f"Versión de goalposts '{body.version_tag}' no encontrada.",
         )
 
-    gp = json.loads(version_row["goalposts"])
+    gp_raw = version_row["goalposts"]
+    gp = gp_raw if isinstance(gp_raw, dict) else json.loads(gp_raw)
     s  = body.signals
 
     # 2. Normalizar indicadores
@@ -354,4 +355,11 @@ def get_goalposts(
     if not row:
         raise HTTPException(status_code=404, detail=f"Versión '{version_tag}' no encontrada.")
 
-    return dict(row)
+    result = dict(row)
+    # goalposts almacenado como JSON en MySQL — puede venir como string
+    if isinstance(result.get("goalposts"), str):
+        try:
+            result["goalposts"] = json.loads(result["goalposts"])
+        except (ValueError, TypeError):
+            pass
+    return result

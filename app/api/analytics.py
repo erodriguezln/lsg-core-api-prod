@@ -378,20 +378,34 @@ def get_sensors_ingest_vs_points(
     return result
 
 
-@router.get("/ic2/summary", dependencies=[Depends(require_roles(["admin","researcher"]))])
+@router.get(
+    "/ic2/summary",
+    dependencies=[Depends(require_roles(["admin", "researcher"]))],
+    summary="Resumen estadístico de IC² por condición y período",
+)
 def get_ic2_summary(
     experiment_tag: Optional[str] = Query(
-        None, description="Filtrar por etiqueta AUDIT"
+        None, description="Filtrar por etiqueta FONDECYT (ej: LSG_C1_T1_CV)"
     ),
     db: Session = Depends(get_db),
 ):
     """
     Resumen estadístico agregado de IC² por condición y período.
 
-    Retorna: media, SD, min, max de IC_fis, IC_ment, IC_LSG e IAR
-    por experiment_tag. 
+    Retorna por `experiment_tag`:
+    - n_participantes, n_cálculos
+    - Media y SD de IC_fis, IC_ment, IC_LSG e IAR
+    - Primer y último registro
+
+    Compatible con la query Q01 de FONDECYT_QUERIES_HITO3.sql.
 
     **Acceso:** admin, researcher.
+
+    **cURL:**
+    ```bash
+    curl -X GET '/lsg-core-api/analytics/ic2/summary?experiment_tag=LSG_C1_T1_CV' \\
+      -H 'Authorization: Bearer <TOKEN>'
+    ```
     """
     base = """
         SELECT
@@ -401,6 +415,8 @@ def get_ic2_summary(
           COUNT(*)                                   AS n_calculos,
           ROUND(AVG(r.IC_fis),   4) AS IC_fis_media,
           ROUND(STDDEV(r.IC_fis),4) AS IC_fis_sd,
+          ROUND(MIN(r.IC_fis),   4) AS IC_fis_min,
+          ROUND(MAX(r.IC_fis),   4) AS IC_fis_max,
           ROUND(AVG(r.IC_ment),  4) AS IC_ment_media,
           ROUND(STDDEV(r.IC_ment),4)AS IC_ment_sd,
           ROUND(AVG(r.IC_LSG),   4) AS IC_LSG_media,
@@ -417,6 +433,6 @@ def get_ic2_summary(
         base += " AND r.experiment_tag = :etag"
         params["etag"] = experiment_tag
     base += " GROUP BY r.experiment_tag ORDER BY condicion, primer_registro"
- 
+
     rows = db.execute(text(base), params).mappings().all()
     return {"items": list(rows), "count": len(rows)}

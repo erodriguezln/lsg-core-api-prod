@@ -8,10 +8,9 @@ from urllib.parse import unquote
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
+from pydantic import BeforeValidator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from urllib.parse import unquote
-from pydantic import BeforeValidator
 
 from app.db import get_db
 from app.security import (
@@ -23,6 +22,8 @@ from app.security import (
 
 router = APIRouter(prefix="/research/export", tags=["research-export"])
 
+
+# Helpers
 
 RESEARCH_PSEUDONYM_SALT = os.getenv("RESEARCH_PSEUDONYM_SALT", "change-me-for-prod")
 
@@ -77,6 +78,8 @@ def _build_csv_response(rows: List[Dict[str, Any]], filename: str) -> Response:
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
+
+# 1) Export: Points ledger
 
 @router.get("/points", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_points(
@@ -165,6 +168,8 @@ def export_points(
     return {"items": data, "count": len(data)}
 
 
+# 2) Export: Game sessions
+
 @router.get("/sessions", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_sessions(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
@@ -239,6 +244,8 @@ def export_sessions(
 
     return {"items": data, "count": len(data)}
 
+
+# 3) Export: Sensor ingest
 
 @router.get("/sensors", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_sensors(
@@ -316,7 +323,7 @@ def export_sensors(
     return {"items": data, "count": len(data)}
 
 
-# Export IC²
+# 4) Export: IC² results
 
 @router.get("/ic2", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_ic2_results(
@@ -330,10 +337,10 @@ def export_ic2_results(
         None, description="Filtra por id_players (opcional)"
     ),
     experiment_tag: Optional[str] = Query(
-        None, description="Filtra por etiqueta FONDECYT (ej: LSG_C1_T1_CV)"
+        None, description="Etiqueta FONDECYT (ej: LSG_C1_T1_CV)"
     ),
     version_tag: Optional[str] = Query(
-        None, description="Versión de goalposts (default: v1.0-SCCC2026)"
+        None, description="Versión de goalposts (default: todos)"
     ),
     format: str = Query(
         "json", pattern="^(json|csv)$", description="Formato de salida"
@@ -344,18 +351,25 @@ def export_ic2_results(
     limit: Optional[int] = Query(
         None, ge=1, le=100000, description="Límite máximo de filas"
     ),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
-    Exporta resultados IC² para análisis de investigación FONDECYT.
- 
+    Exporta resultados IC² (ic2_result) para análisis.
+
     Incluye: índices IC² (Icf, Isfg, Ipma, Itd, IC_fis, IC_ment, IC_LSG, IAR),
-    señales crudas, admisibilidad, experiment_tag y ventana temporal.
- 
-    Compatible con las queries de FONDECYT_QUERIES_HITO3.sql.
- 
+    señales crudas (raw_inputs), admisibilidad por subdimensión, experiment_tag
+    y ventana temporal. Soporta seudonimización de identidad del jugador.
+
     **Acceso:** admin, researcher.
+
+    **cURL (CSV para análisis en R/Python):**
+    ```bash
+    curl -X GET '/lsg-core-api/research/export/ic2?experiment_tag=LSG_C1_T1_CV&format=csv' \\
+      -H 'Authorization: Bearer <TOKEN>' --output ic2_export.csv
+    ```
     """
+    import json as _json
+
     base = """
         SELECT
           r.id_ic2_result,
@@ -376,27 +390,51 @@ def export_ic2_results(
         JOIN ic2_goalpost_version v ON v.id_version  = r.id_version
     """
     conditions, params = [], {}
- 
+
     if from_date:
-        conditions.append("r.window_start >= :fd");  params["fd"] = from_date
+        conditions.append("r.window_start >= :fd");   params["fd"] = from_date
     if to_date:
-        conditions.append("r.window_end <= :td");    params["td"] = to_date
+        conditions.append("r.window_end <= :td");     params["td"] = to_date
     if player_id:
-        conditions.append("r.id_players = :pid");    params["pid"] = player_id
+        conditions.append("r.id_players = :pid");     params["pid"] = player_id
     if experiment_tag:
-        conditions.append("r.experiment_tag = :etag"); params["etag"] = experiment_tag
+        conditions.append("r.experiment_tag = :etag");params["etag"] = experiment_tag
     if version_tag:
-        conditions.append("v.version_tag = :vtag");  params["vtag"] = version_tag
- 
+        conditions.append("v.version_tag = :vtag");   params["vtag"] = version_tag
+
     if conditions:
         base += " WHERE " + " AND ".join(conditions)
     base += " ORDER BY r.id_players, r.window_start"
     if limit:
         base += " LIMIT :limit"; params["limit"] = limit
- 
+
     rows = db.execute(text(base), params).mappings().all()
-    data = _apply_pseudonymization([dict(r) for r in rows], include_raw_ids)
+
+    # Parse JSON fields stored as strings
+    data_raw = []
+    for row in rows:
+        r = dict(row)
+        for field in ("admissibility", "raw_inputs"):
+            if isinstance(r.get(field), str):
+                try:
+                    r[field] = _json.loads(r[field])
+                except (ValueError, TypeError):
+                    pass
+        data_raw.append(r)
+
+    data = _apply_pseudonymization(data_raw, include_raw_ids)
 
     if format == "csv":
-        return _build_csv_response(data, "ic2_export.csv")
+        # Flatten JSON fields for CSV compatibility
+        flat = []
+        for r in data:
+            row_flat = {}
+            for k, v in r.items():
+                if isinstance(v, (dict, list)):
+                    row_flat[k] = str(v)
+                else:
+                    row_flat[k] = v
+            flat.append(row_flat)
+        return _build_csv_response(flat, "ic2_export.csv")
+
     return {"items": data, "count": len(data)}

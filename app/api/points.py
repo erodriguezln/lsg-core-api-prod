@@ -93,7 +93,18 @@ def get_attributes_map(
         text("SELECT sp_get_att_subattributes_name() AS data")
     ).mappings().first()
 
-    return row["data"] if row and row["data"] is not None else []
+    if not row or row["data"] is None:
+        return []
+
+    data = row["data"]
+    # SQLAlchemy text() puede retornar JSON como string en MySQL
+    if isinstance(data, str):
+        import json
+        try:
+            data = json.loads(data)
+        except (ValueError, TypeError):
+            pass
+    return data
 
 
 # ---------- Points & Balances ----------
@@ -159,7 +170,7 @@ def get_player_attribute_points(
     return list(rows)
 
 
-@router.get("/points/ledger", tags=["points"])
+@router.get("/points/ledger", tags=["points"], dependencies=[Depends(require_roles(ROLE_ALL))])
 def get_points_ledger(
     player_id: Optional[int] = Query(None),
     videogame_id: Optional[int] = Query(None),
@@ -167,21 +178,13 @@ def get_points_ledger(
     from_ts: Optional[str] = Query(None, description="YYYY-MM-DD HH:MM:SS"),
     to_ts: Optional[str] = Query(None, description="YYYY-MM-DD HH:MM:SS"),
     db: Session = Depends(get_db),
-    current: CurrentUser = Depends(get_current_user),
 ):
     """
     # 11. GET /points/ledger
     Consulta filtrable del ledger de puntos.
 
-    **Acceso:** todos los roles autenticados.
-    - : forzado a ver solo su propio ledger (player_id ignorado del query).
-    - : pueden filtrar por cualquier player_id.
+    Acceso: admin, researcher, teacher, player.
     """
-    elevated = {"admin", "researcher", "teacher"}
-    if not any(r in elevated for r in current.roles):
-        if current.player_id is None:
-            raise HTTPException(status_code=403, detail="No se puede determinar tu player_id desde el token.")
-        player_id = current.player_id
     base = """
         SELECT
           id_points_ledger,

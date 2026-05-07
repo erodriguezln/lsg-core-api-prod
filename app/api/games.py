@@ -323,7 +323,18 @@ def get_videogame_mechanics(
         {"game_id": game_id},
     ).mappings().all()
 
-    return list(rows)
+    result = []
+    for row in rows:
+        r = dict(row)
+        # options stored as JSON string in MySQL → parse to dict
+        if r.get("options") and isinstance(r["options"], str):
+            try:
+                import json as _json
+                r["options"] = _json.loads(r["options"])
+            except (ValueError, TypeError):
+                pass
+        result.append(r)
+    return result
 
 
 # ---------- Redemptions ----------
@@ -644,10 +655,16 @@ def end_session(
               (id_players, id_videogame, event_type, occurred_at, metrics)
             VALUES (:pid, :gid, 'session_end', :ended_at,
               JSON_OBJECT('id_session', :sid, 'ended_at', :ended_at))
-        """), {"pid": player_id, "gid": game_id, "sid": session_id, "ended_at": str(ended_at)})
+        """), {
+            "pid": player_id,
+            "gid": game_id,
+            "sid": session_id,
+            # strftime garantiza formato compatible con MySQL TIMESTAMP
+            "ended_at": ended_at.strftime('%Y-%m-%d %H:%M:%S'),
+        })
         db.commit()
     except Exception:
-        db.rollback()
+        db.rollback()  # no bloqueante: sesión ya fue guardada
 
     return {"status": "ended", "id_session": session_id}
 
