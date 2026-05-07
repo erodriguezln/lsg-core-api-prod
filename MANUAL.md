@@ -1,12 +1,12 @@
-# Manual de Usuario — LSG-Core-API
+# Manual de Usuario - LSG-Core-API
 ## API Principal LifeSync-Games
 
 **URL del servicio:** https://lsg.diinf.usach.cl/lsg-core-api/docs  
-**Versión:** 1.2.1 | **Proyecto:** FONDECYT Regular 1240814 — InTeractiOn Lab, USACH
+**Versión:** 1.2.1 | **Proyecto:** LifeSync-Games - InTeractiOn Lab, USACH
 
 ---
 
-## Antes de empezar — Autenticación obligatoria
+## Antes de empezar - Autenticación obligatoria
 
 **Todos los endpoints requieren un token JWT válido.** Sigue estos pasos antes de usar cualquier endpoint:
 
@@ -28,13 +28,13 @@ El token expira en **120 minutos**. Si ves un error 401, renueva el token repiti
 
 | Sección | player | teacher | researcher | admin |
 |---------|:------:|:-------:|:----------:|:-----:|
-| Ver mis propios datos | ✅ | ✅ | ✅ | ✅ |
-| Ver datos de otros jugadores | ❌ | ✅ | ✅ | ✅ |
-| Crear/modificar configuración | ❌ | ❌ | ✅ | ✅ |
-| Administración del sistema | ❌ | ❌ | ❌ | ✅ |
-| Exportar datos de investigación | ❌ | ❌ | ✅ | ✅ |
-| Calcular y ver IC² propio | ✅ | ✅ | ✅ | ✅ |
-| Ver IC² de otros | ❌ | ✅ | ✅ | ✅ |
+| Ver mis propios datos | OK | OK | OK | OK |
+| Ver datos de otros jugadores | X | OK | OK | OK |
+| Crear/modificar configuración | X | X | OK | OK |
+| Administración del sistema | X | X | X | OK |
+| Exportar datos de investigación | X | X | OK | OK |
+| Calcular y ver IC² propio | OK | OK | OK | OK |
+| Ver IC² de otros | X | OK | OK | OK |
 
 ---
 
@@ -42,7 +42,7 @@ El token expira en **120 minutos**. Si ves un error 401, renueva el token repiti
 
 ---
 
-### GET /health — Verificar disponibilidad del servicio
+### GET /health - Verificar disponibilidad del servicio
 
 **¿Para qué sirve?** Confirmar que la API está en línea. No requiere token.
 
@@ -53,7 +53,7 @@ Respuesta: `{"status": "ok"}`
 
 ---
 
-### GET /health/full — Estado detallado del sistema
+### GET /health/full - Estado detallado del sistema
 
 **¿Para qué sirve?** Verificar que la base de datos, las vistas SQL y las tablas de features nuevas (IC², offline) estén disponibles. Útil para diagnóstico.
 
@@ -86,7 +86,7 @@ Si algún elemento muestra `"status": "error"`, reportar al equipo técnico.
 
 ---
 
-### GET /meta/info — Información de la API
+### GET /meta/info - Información de la API
 
 **¿Para qué sirve?** Ver la versión actual, entorno y base de datos conectada.
 
@@ -101,7 +101,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/meta/info' \
 
 ---
 
-### GET /players — Listar todos los jugadores
+### GET /players - Listar todos los jugadores
 
 **¿Para qué sirve?** Obtener la lista paginada de todos los jugadores registrados, incluyendo sus roles activos.
 
@@ -140,7 +140,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/players?page=1&page_size=20
 
 ---
 
-### GET /players/{id} — Ver detalle de un jugador
+### GET /players/{id} - Ver detalle de un jugador
 
 **¿Para qué sirve?** Obtener toda la información de un jugador específico, incluyendo roles activos.
 
@@ -169,7 +169,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/players/46' \
 
 ---
 
-### GET /players/{id}/games — Videojuegos de un jugador
+### GET /players/{id}/games - Videojuegos de un jugador
 
 **¿Para qué sirve?** Ver en qué videojuegos participa un jugador y cuántos puntos ha gastado.
 
@@ -194,7 +194,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/players/46/games' \
 
 ---
 
-### GET /players/{id}/timeline — Timeline de eventos del jugador
+### GET /players/{id}/timeline - Timeline de eventos del jugador
 
 **¿Para qué sirve?** Ver todos los eventos de un jugador en orden cronológico: sesiones de juego, movimientos de puntos, ingestas de sensores y canjes.
 
@@ -215,7 +215,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/players/46/timeline?from_ts
 
 ---
 
-### POST /players/{id}/attributes/init — Inicializar atributos
+### POST /players/{id}/attributes/init - Inicializar atributos
 
 **¿Para qué sirve?** Crear los registros iniciales de atributos para un jugador nuevo. Debe ejecutarse una vez al incorporar a un participante.
 
@@ -234,7 +234,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/players/54/attributes/init
 
 ---
 
-### GET /attributes — Catálogo de atributos
+### GET /attributes - Catálogo de atributos
 
 **¿Para qué sirve?** Ver todos los atributos disponibles en LSG (Físico, Mental, Social, etc.).
 
@@ -247,7 +247,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/attributes' \
 
 ---
 
-### GET /attributes/{id}/subattributes — Subatributos de un atributo
+### GET /attributes/{id}/subattributes - Subatributos de un atributo
 
 **¿Para qué sirve?** Ver los subatributos específicos dentro de un atributo (ej: MVPA, pasos dentro del atributo Físico).
 
@@ -260,7 +260,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/attributes/1/subattributes'
 
 ---
 
-### GET /attributes-map — Mapa completo atributos-subatributos
+### GET /attributes-map - Mapa completo atributos-subatributos
 
 **¿Para qué sirve?** Ver el árbol completo de atributos y sus subatributos en un solo JSON. Útil para entender la estructura del perfil del jugador.
 
@@ -273,7 +273,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/attributes-map' \
 
 ---
 
-### GET /players/{id}/points/balance — Saldo de puntos por dimensión
+### GET /players/{id}/points/balance - Saldo de puntos por dimensión
 
 **¿Para qué sirve?** Ver cuántos puntos tiene el jugador en cada dimensión de puntos del sistema.
 
@@ -295,7 +295,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/players/46/points/balance' 
 
 ---
 
-### GET /points/ledger — Historial de movimientos de puntos
+### GET /points/ledger - Historial de movimientos de puntos
 
 **¿Para qué sirve?** Ver el historial detallado de todos los créditos y débitos de puntos. Los jugadores solo ven sus propios movimientos; researcher y admin pueden filtrar por cualquier jugador.
 
@@ -318,7 +318,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/points/ledger?player_id=46&
 
 ---
 
-### POST /players/{id}/points/adjust — Ajuste manual de puntos
+### POST /players/{id}/points/adjust - Ajuste manual de puntos
 
 **¿Para qué sirve?** Agregar o quitar puntos manualmente a un jugador (ej: corrección de datos, puntos de compensación). Queda registrado con `source_type = ADJUST`.
 
@@ -355,7 +355,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/players/46/points/adjust' 
 
 ---
 
-### GET /videogames — Catálogo de videojuegos
+### GET /videogames - Catálogo de videojuegos
 
 **Roles:** todos
 
@@ -374,7 +374,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/videogames' \
 
 ---
 
-### GET /videogames/{id}/mechanics — Mecánicas modificables de un juego
+### GET /videogames/{id}/mechanics - Mecánicas modificables de un juego
 
 **¿Para qué sirve?** Ver qué mecánicas del juego pueden ser modificadas según el IC² del jugador (stamina, velocidad, drop-rate, etc.). El campo `options` contiene los parámetros de cada mecánica.
 
@@ -401,7 +401,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/videogames/8/mechanics' \
 
 ---
 
-### POST /videogames/{id}/players/{pid}/connect — Conectar jugador al videojuego
+### POST /videogames/{id}/players/{pid}/connect - Conectar jugador al videojuego
 
 **¿Para qué sirve?** Registrar que un jugador está usando el mod LSG en un videojuego. Debe llamarse cuando el jugador inicia el juego con el mod activo.
 
@@ -419,7 +419,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/videogames/14/players/46/c
 
 ---
 
-### POST /videogames/{id}/players/{pid}/sessions — Iniciar sesión de juego
+### POST /videogames/{id}/players/{pid}/sessions - Iniciar sesión de juego
 
 **¿Para qué sirve?** Registrar el inicio de una sesión de juego. Llama a este endpoint cuando el jugador abre el juego con el mod LSG activo.
 
@@ -440,7 +440,7 @@ Guarda el `id_session` para cerrar la sesión después.
 
 ---
 
-### PATCH /videogames/{id}/players/{pid}/sessions/{sid}/end — Cerrar sesión de juego
+### PATCH /videogames/{id}/players/{pid}/sessions/{sid}/end - Cerrar sesión de juego
 
 **¿Para qué sirve?** Registrar el cierre de una sesión. El sistema calcula automáticamente la duración (`duration_seconds`). También registra el evento en `interaction_logs` para trazabilidad FONDECYT.
 
@@ -459,7 +459,7 @@ curl -X PATCH 'https://lsg.diinf.usach.cl/lsg-core-api/videogames/14/players/46/
 
 ---
 
-### POST /videogames/{id}/players/{pid}/redeem/preview — Vista previa del canje
+### POST /videogames/{id}/players/{pid}/redeem/preview - Vista previa del canje
 
 **¿Para qué sirve?** Verificar si el jugador tiene suficientes puntos para un canje, sin realizarlo. Ideal para mostrar al jugador qué puede canjear antes de confirmar.
 
@@ -496,7 +496,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/videogames/14/players/46/r
 
 ---
 
-### POST /videogames/{id}/players/{pid}/redeem — Realizar canje
+### POST /videogames/{id}/players/{pid}/redeem - Realizar canje
 
 **¿Para qué sirve?** Efectuar el canje de puntos por una mecánica del juego. Si el jugador tiene saldo suficiente, se descuentan los puntos y se activa la mecánica. Se registra en `interaction_logs` para trazabilidad FONDECYT.
 
@@ -530,7 +530,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/videogames/14/players/46/r
 }
 ```
 
-**Error 400 — saldo insuficiente:**
+**Error 400 - saldo insuficiente:**
 ```json
 {
   "code": "INSUFFICIENT_POINTS",
@@ -555,7 +555,7 @@ Paso 5: POST /sensors/ingest/webhook → ingestar datos usando los IDs obtenidos
 
 ---
 
-### GET /sensors — Catálogo de sensores disponibles
+### GET /sensors - Catálogo de sensores disponibles
 
 **Roles:** todos
 
@@ -566,7 +566,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/sensors' \
 
 ---
 
-### GET /sensors/{id}/endpoints — Endpoints de un sensor
+### GET /sensors/{id}/endpoints - Endpoints de un sensor
 
 **¿Para qué sirve?** Ver los endpoints de ingestión de un sensor. El `id_sensor_endpoint` obtenido aquí se necesita para el webhook.
 
@@ -579,7 +579,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/1/endpoints' \
 
 ---
 
-### GET /sensors/players/{id} — Sensores activos de un jugador
+### GET /sensors/players/{id} - Sensores activos de un jugador
 
 **¿Para qué sirve?** Ver qué sensores tiene configurado un jugador, con los IDs necesarios para ingestar datos.
 
@@ -597,7 +597,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/players/46' \
 
 ---
 
-### POST /sensors/players/{id}/link — Vincular sensor a jugador
+### POST /sensors/players/{id}/link - Vincular sensor a jugador
 
 **Roles:** admin, researcher
 
@@ -610,7 +610,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/players/46/link' \
 
 ---
 
-### POST /sensors/players/{id}/link-endpoint — Activar endpoint para jugador
+### POST /sensors/players/{id}/link-endpoint - Activar endpoint para jugador
 
 **¿Para qué sirve?** Activar un endpoint de sensor específico para un jugador. Genera el `id_players_sensor_endpoint` necesario para el webhook.
 
@@ -640,7 +640,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/players/46/link-en
 
 ---
 
-### POST /sensors/ingest/webhook — Ingestar evento de sensor
+### POST /sensors/ingest/webhook - Ingestar evento de sensor
 
 **¿Para qué sirve?** Registrar un dato capturado por un sensor (pasos, frecuencia cardíaca, calidad del sueño, etc.).
 
@@ -672,7 +672,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/sensors/ingest/webhook' \
 
 ---
 
-## 6. IC² LSG — Índice Compuesto Físico-Mental
+## 6. IC² LSG - Índice Compuesto Físico-Mental
 
 El IC² LSG es el núcleo científico del sistema. Convierte señales reales del participante (actividad física, calidad del sueño, rendimiento cognitivo) en un índice numérico [0,1] que determina las mecánicas activas en el videojuego.
 
@@ -680,7 +680,7 @@ El IC² LSG es el núcleo científico del sistema. Convierte señales reales del
 
 ---
 
-### GET /ic2/goalposts — Ver los parámetros de normalización vigentes
+### GET /ic2/goalposts - Ver los parámetros de normalización vigentes
 
 **¿Para qué sirve?** Consultar qué rangos y estrategias de normalización se aplican a cada señal. Transparencia total para los participantes.
 
@@ -693,7 +693,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/ic2/goalposts?version_tag=v
 
 ---
 
-### POST /ic2/compute — Calcular el IC² de un jugador
+### POST /ic2/compute - Calcular el IC² de un jugador
 
 **¿Para qué sirve?** Enviar las señales medidas de un participante y recibir su Índice Compuesto Físico-Mental. El resultado se almacena automáticamente y se registra en `interaction_logs`.
 
@@ -786,7 +786,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/ic2/compute' \
 
 ---
 
-### GET /ic2/history — Historial de resultados IC²
+### GET /ic2/history - Historial de resultados IC²
 
 **¿Para qué sirve?** Ver la evolución histórica del IC² de un jugador a lo largo del tiempo.
 
@@ -821,7 +821,7 @@ Para videojuegos que no tienen conexión permanente con el servidor, el sistema 
 
 ---
 
-### POST /offline/sync — Sincronizar lote de puntos offline
+### POST /offline/sync - Sincronizar lote de puntos offline
 
 **Roles:** todos (`player` solo para sí mismo)
 
@@ -878,7 +878,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/offline/sync' \
 
 ---
 
-### GET /offline/queue — Ver cola offline de un jugador
+### GET /offline/queue - Ver cola offline de un jugador
 
 **Roles:** todos (`player` solo sus propios datos; `researcher/admin` pueden ver cualquiera)
 
@@ -895,7 +895,7 @@ Estos endpoints son para researcher y admin. Proveen vistas agregadas para anál
 
 ---
 
-### GET /analytics/ic2/summary — Resumen estadístico IC² por condición
+### GET /analytics/ic2/summary - Resumen estadístico IC² por condición
 
 **¿Para qué sirve?** Ver la media, desviación estándar, mínimo y máximo del IC² agrupado por `experiment_tag`. Compatible con el análisis Q01 de FONDECYT.
 
@@ -940,7 +940,7 @@ Todos los endpoints de exportación:
 
 ---
 
-### GET /research/export/points — Exportar movimientos de puntos
+### GET /research/export/points - Exportar movimientos de puntos
 
 ```bash
 # Exportar como CSV
@@ -964,7 +964,7 @@ curl -X GET \
 
 ---
 
-### GET /research/export/sessions — Exportar sesiones de juego
+### GET /research/export/sessions - Exportar sesiones de juego
 
 ```bash
 curl -X GET \
@@ -975,7 +975,7 @@ curl -X GET \
 
 ---
 
-### GET /research/export/sensors — Exportar eventos de sensor
+### GET /research/export/sensors - Exportar eventos de sensor
 
 ```bash
 curl -X GET \
@@ -986,7 +986,7 @@ curl -X GET \
 
 ---
 
-### GET /research/export/ic2 — Exportar resultados IC²
+### GET /research/export/ic2 - Exportar resultados IC²
 
 **¿Para qué sirve?** Exportar todos los resultados IC² calculados, incluyendo señales crudas y admisibilidad. Diseñado para análisis estadístico en R o Python.
 
