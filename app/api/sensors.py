@@ -440,6 +440,36 @@ def ingest_sensor_event(
 
     occurred_at = payload.occurred_at or datetime.utcnow()
 
+    # Validar players_sensor_endpoint_id ANTES del INSERT
+    # Evita el FK IntegrityError con un mensaje claro al usuario
+    if payload.players_sensor_endpoint_id is not None:
+        pse = db.execute(
+            text("""
+                SELECT id_players_sensor_endpoint
+                FROM   players_sensor_endpoint
+                WHERE  id_players_sensor_endpoint = :pse_id
+                  AND  id_players = :pid
+            """),
+            {"pse_id": payload.players_sensor_endpoint_id, "pid": payload.player_id},
+        ).mappings().first()
+
+        if not pse:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code":    "PLAYERS_SENSOR_ENDPOINT_NOT_FOUND",
+                    "message": (
+                        f"id_players_sensor_endpoint={payload.players_sensor_endpoint_id} "
+                        f"no existe para el jugador {payload.player_id}."
+                    ),
+                    "hint": (
+                        "Obtén el ID correcto desde: "
+                        "GET /sensors/players/{player_id} → campo 'id_players_sensor_endpoint', "
+                        "o desde el resultado de POST /sensors/players/{player_id}/link-endpoint."
+                    ),
+                },
+            )
+
     try:
         result = db.execute(
             text("""
