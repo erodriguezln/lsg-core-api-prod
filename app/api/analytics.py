@@ -385,7 +385,7 @@ def get_sensors_ingest_vs_points(
 )
 def get_ic2_summary(
     experiment_tag: Optional[str] = Query(
-        None, description="Filtrar por etiqueta FONDECYT (ej: LSG_C1_T1_CV)"
+        None, description="Filtrar por etiqueta (ej: LSG_C1_T1_CV)"
     ),
     db: Session = Depends(get_db),
 ):
@@ -397,7 +397,7 @@ def get_ic2_summary(
     - Media y SD de IC_fis, IC_ment, IC_LSG e IAR
     - Primer y último registro
 
-    Compatible con la query Q01 de FONDECYT_QUERIES_HITO3.sql.
+    Compatible con la query Q01 de QUERIES_HITO3.sql.
 
     **cURL:**
     ```bash
