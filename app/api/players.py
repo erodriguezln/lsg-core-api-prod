@@ -25,10 +25,10 @@ def list_players(
     db: Session = Depends(get_db),
 ):
     """
-    # 1. GET /players
+    # GET /players
     Lista jugadores con paginación.
 
-    Acceso: admin, researcher, teacher.
+    **Roles disponibles:** "admin", "researcher", "teacher"  
     """
     offset = (page - 1) * page_size
 
@@ -77,10 +77,10 @@ def get_player(
     db: Session = Depends(get_db),
 ):
     """
-    # 2. GET /players/{player_id}
+    # GET /players/{player_id}
     Detalle de un jugador.
 
-    Acceso: admin, researcher, teacher, player.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     row = db.execute(
         text(
@@ -117,10 +117,10 @@ def delete_player(
     db: Session = Depends(get_db),
 ):
     """
-    # 3. DELETE /players/{player_id}
+    # DELETE /players/{player_id}
     Llama a sp_delete_player_cascade para borrar en cascada.
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"  
     """
     try:
         db.execute(text("CALL sp_delete_player_cascade(:p_id)"), {"p_id": player_id})
@@ -138,10 +138,10 @@ def init_player_attributes(
     db: Session = Depends(get_db),
 ):
     """
-    # 4. POST /players/{player_id}/attributes/init
+    # POST /players/{player_id}/attributes/init
     Inicializa players_attributes para este jugador.
 
-    Acceso: admin, teacher, researcher.
+    **Roles disponibles:** "admin", "researcher", "teacher"  
     """
     try:
         db.execute(
@@ -164,10 +164,10 @@ def get_player_games(
     db: Session = Depends(get_db),
 ):
     """
-    # 5. GET /players/{player_id}/games
+    # GET /players/{player_id}/games
     Usa la vista v_player_game_overview.
 
-    Acceso: admin, researcher, teacher, player.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     rows = db.execute(
         text(
@@ -211,7 +211,7 @@ def get_player_timeline(
     - sensor_ingest
     - redemption
 
-    Acceso: admin, researcher, teacher, player.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     params_base = {"pid": player_id}
     if from_ts is not None:

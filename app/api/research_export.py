@@ -101,7 +101,7 @@ def export_points(
     Exporta movimientos de puntos (points_ledger) para análisis de investigación.
     Incluye seudonimización de identidad del jugador.
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"  
     """
     base = """
         SELECT
@@ -187,7 +187,8 @@ def export_sessions(
 ):
     """
     Exporta sesiones de juego (lsg_game_session + player_videogame + players).
-    Acceso: admin, researcher.
+
+    **Roles disponibles:** "admin", "researcher"  
     """
     base = """
         SELECT
@@ -265,7 +266,8 @@ def export_sensors(
     """
     Exporta eventos de sensor (sensor_ingest_event) con contexto.
     Nota ética: incluye raw_payload tal como existe en la tabla.
-    Acceso: admin, researcher.
+
+    **Roles disponibles:** "admin", "researcher"  
     """
     base = """
         SELECT
@@ -360,7 +362,7 @@ def export_ic2_results(
     señales crudas (raw_inputs), admisibilidad por subdimensión, experiment_tag
     y ventana temporal. Soporta seudonimización de identidad del jugador.
 
-    **Acceso:** admin, researcher.
+    **Roles disponibles:** "admin", "researcher"  
 
     **cURL (CSV para análisis en R/Python):**
     ```bash

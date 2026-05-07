@@ -164,7 +164,7 @@ def admin_list_attributes(
     """
     # 28. GET /attributes
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     rows = db.execute(
         text(
@@ -195,7 +195,7 @@ def admin_get_attribute(
     """
     # 29. GET /attributes/{attribute_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -228,7 +228,7 @@ def admin_create_attribute(
     """
     # 30. POST /attributes
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     try:
         result = db.execute(
@@ -266,7 +266,7 @@ def admin_update_attribute(
     """
     # 31. PUT /attributes/{attribute_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
 
     _ensure_exists(
@@ -319,7 +319,7 @@ def admin_delete_attribute(
     """
     # 32. DELETE /attributes/{attribute_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -357,7 +357,7 @@ def admin_list_subattributes(
     """
     # 33. GET /subattributes
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base = """
         SELECT
@@ -389,7 +389,7 @@ def admin_get_subattribute(
     """
     # 34. GET /subattributes/{sub_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -422,7 +422,7 @@ def admin_create_subattribute(
     """
     # 35. POST /subattributes
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -477,7 +477,7 @@ def admin_update_subattribute(
     """
     # 36. PUT /subattributes/{sub_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -539,7 +539,7 @@ def admin_delete_subattribute(
     """
     # 37. DELETE /subattributes/{sub_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -576,7 +576,7 @@ def admin_list_point_dimensions(
     """
     # 38. GET /point-dimensions
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     rows = db.execute(
         text(
@@ -606,7 +606,7 @@ def admin_get_point_dimension(
     """
     # 39. GET /point-dimensions/{pd_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -638,7 +638,7 @@ def admin_create_point_dimension(
     """
     # 40. POST /point-dimensions
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     if payload.id_attributes is not None:
         _ensure_exists(
@@ -703,7 +703,7 @@ def admin_update_point_dimension(
     """
     # 41. PUT /point-dimensions/{pd_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -778,7 +778,7 @@ def admin_delete_point_dimension(
     """
     # 42. DELETE /point-dimensions/{pd_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -815,7 +815,7 @@ def admin_list_mod_mechanics(
     """
     # 43. GET /modifiable-mechanics
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     rows = db.execute(
         text(
@@ -844,7 +844,7 @@ def admin_get_mod_mechanic(
     """
     # 44. GET /modifiable-mechanics/{mm_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -875,7 +875,7 @@ def admin_create_mod_mechanic(
     """
     # 45. POST /modifiable-mechanics
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     try:
         result = db.execute(
@@ -915,7 +915,7 @@ def admin_update_mod_mechanic(
     """
     # 46. PUT /modifiable-mechanics/{mm_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -973,7 +973,7 @@ def admin_delete_mod_mechanic(
     """
     # 47. DELETE /modifiable-mechanics/{mm_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -1013,7 +1013,7 @@ def admin_list_mod_mech_vg(
     """
     # 48. GET /modifiable-mechanics-videogames
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base = """
         SELECT
@@ -1047,7 +1047,7 @@ def admin_get_mod_mech_vg(
     """
     # 49. GET /modifiable-mechanics-videogames/{mmv_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -1082,7 +1082,7 @@ def admin_create_mod_mech_vg(
     """
     # 50. POST /modifiable-mechanics-videogames
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -1143,7 +1143,7 @@ def admin_update_mod_mech_vg(
     """
     # 51. PUT /modifiable-mechanics-videogames/{mmv_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -1213,7 +1213,7 @@ def admin_delete_mod_mech_vg(
     """
     # 52. DELETE /modifiable-mechanics-videogames/{mmv_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,

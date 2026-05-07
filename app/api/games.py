@@ -126,8 +126,9 @@ def list_videogames(
     db: Session = Depends(get_db),
 ):
     """
-    # 13. GET /videogames
-    Acceso: todos los roles.
+    # GET /videogames
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     rows = db.execute(
         text(
@@ -156,8 +157,9 @@ def get_videogame(
     db: Session = Depends(get_db),
 ):
     """
-    # 14. GET /videogames/{game_id}
-    Acceso: todos los roles.
+    # GET /videogames/{game_id}
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     row = db.execute(
         text(
@@ -203,10 +205,10 @@ def create_videogame(
     db: Session = Depends(get_db),
 ):
     """
-    POST /videogames
+    # POST /videogames
     Crea un nuevo videojuego.
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"    
     """
     exists = db.execute(
         text(
@@ -300,8 +302,9 @@ def get_videogame_mechanics(
     db: Session = Depends(get_db),
 ):
     """
-    # 15. GET /videogames/{game_id}/mechanics
-    Acceso: todos los roles.
+    # GET /videogames/{game_id}/mechanics
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     rows = db.execute(
         text(
@@ -347,8 +350,9 @@ def preview_redeem_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    Preview de canje (sin modificaciones).
-    Acceso: player dueño, admin, researcher, teacher.
+    # Preview de canje (sin modificaciones).
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     _assert_mmv_exists_for_game(db, game_id, payload.modifiable_mechanic_videogame_id)
 
@@ -382,8 +386,9 @@ def redeem_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    Canje robusto con verificación de saldo y transacción atómica.
-    Acceso: player dueño, admin, researcher, teacher.
+    # Canje robusto con verificación de saldo y transacción atómica.
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     from uuid import uuid4
     import json
@@ -561,8 +566,9 @@ def start_session(
     db: Session = Depends(get_db),
 ):
     """
-    # 17. POST /videogames/{game_id}/players/{player_id}/sessions
-    Acceso: player dueño, admin, researcher, teacher.
+    # POST /videogames/{game_id}/players/{player_id}/sessions
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     import json
 
@@ -613,8 +619,9 @@ def end_session(
     db: Session = Depends(get_db),
 ):
     """
-    # 18. PATCH /videogames/{game_id}/players/{player_id}/sessions/{session_id}/end
-    Acceso: player dueño, admin, researcher, teacher.
+    # PATCH /videogames/{game_id}/players/{player_id}/sessions/{session_id}/end
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     ended_at = payload.ended_at or datetime.utcnow()
 
@@ -677,9 +684,9 @@ def create_modifiable_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    POST /videogames/mechanics/catalog
-    Crea una mecánica en el catálogo global.
-    Acceso: admin, researcher.
+    # POST /videogames/mechanics/catalog
+
+    **Roles disponibles:** "admin", "researcher"  
     """
     exists = db.execute(
         text("""
@@ -739,9 +746,9 @@ def attach_mechanic_to_videogame(
     db: Session = Depends(get_db),
 ):
     """
-    POST /videogames/{game_id}/mechanics
-    Asocia una mecánica al catálogo de un videojuego.
-    Acceso: admin, researcher.
+    # POST /videogames/{game_id}/mechanics
+
+    **Roles disponibles:** "admin", "researcher"
     """
     import json
 
@@ -815,9 +822,9 @@ def connect_player_videogame(
     db: Session = Depends(get_db),
 ):
     """
-    POST /videogames/{game_id}/players/{player_id}/connect
-    Upsert vínculo player<->videogame con heartbeat.
-    Acceso: player dueño, admin, researcher, teacher.
+    # POST /videogames/{game_id}/players/{player_id}/connect
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     import json
 

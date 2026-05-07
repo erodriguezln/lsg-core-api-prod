@@ -109,9 +109,7 @@ def sync_offline_events(
     - **DUPLICATE**: `client_ref` ya existe en la cola (idempotente).
     - **REJECTED**: evento inválido (fuera de ventana, monto excedido, etc.).
 
-    **Acceso:**
-    - `player`: solo puede sincronizar su propio `player_id`.
-    - `admin`: puede sincronizar cualquier `player_id`.
+    **Roles disponibles:** "admin"
     """
     elevated = {"admin"}
     if not any(r in elevated for r in current.roles):
@@ -308,9 +306,7 @@ def get_offline_queue(
     """
     Consulta el estado de los eventos en la cola offline de un jugador.
 
-    **Acceso:**
-    - `player`: solo su propia cola.
-    - `researcher / admin`: cualquier player.
+    **Roles disponibles:** "admin", "researcher"  
     """
     elevated = {"admin", "researcher"}
     if not any(r in elevated for r in current.roles):

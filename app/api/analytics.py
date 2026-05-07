@@ -24,7 +24,7 @@ def get_points_balance(
     # 25. GET /analytics/points-balance
     Lee desde v_points_balance.
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base_query = "SELECT * FROM v_points_balance"
     params = {}
@@ -48,7 +48,7 @@ def get_player_game_overview(
     # 24. GET /analytics/player-game-overview
     Usa v_player_game_overview.
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base = """
         SELECT
@@ -88,7 +88,7 @@ def get_player_attribute_balance(
     # 26. GET /analytics/player-attribute-balance
     Usa v_player_attribute_balance.
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base = """
         SELECT
@@ -128,7 +128,7 @@ def get_time_to_first_redeem(
     Versión simple: tiempo promedio (en minutos) desde primera sesión
     hasta primer canje, por juego.
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     query = """
         WITH first_session AS (
@@ -198,7 +198,7 @@ def get_sensors_quality(
     - avg_events_per_day
     - min/avg/max parsed_value
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base = """
         SELECT
@@ -298,7 +298,7 @@ def get_sensors_ingest_vs_points(
     - conversion_rate: points_events / ingest_events
     - avg_points_per_event: total_points / points_events
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base = """
         SELECT
@@ -399,13 +399,13 @@ def get_ic2_summary(
 
     Compatible con la query Q01 de FONDECYT_QUERIES_HITO3.sql.
 
-    **Acceso:** admin, researcher.
-
     **cURL:**
     ```bash
     curl -X GET '/lsg-core-api/analytics/ic2/summary?experiment_tag=LSG_C1_T1_CV' \\
       -H 'Authorization: Bearer <TOKEN>'
     ```
+
+    **Roles disponibles:** "admin", "researcher"    
     """
     base = """
         SELECT

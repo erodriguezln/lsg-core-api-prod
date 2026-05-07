@@ -141,9 +141,7 @@ def compute_ic2(
     promedio geométrico y calcula IAR.
     Persiste en `ic2_result` e `interaction_logs`.
 
-    **Acceso:**
-    - `player`: solo su propio IC².
-    - `teacher / researcher / admin`: cualquier player.
+    **Roles disponibles:** "admin", "researcher", "teacher"
     """
     elevated = {"admin", "researcher", "teacher"}
     if not any(r in elevated for r in current.roles):
@@ -297,8 +295,7 @@ def get_ic2_history(
     """
     Historial de resultados IC² de un jugador, ordenado cronológicamente inverso.
 
-    **Acceso:** `teacher`, `researcher`, `admin` para cualquier player;
-    `player` solo su propio historial.
+    **Roles disponibles:** "admin", "researcher", "teacher"
     """
     elevated = {"admin", "researcher", "teacher"}
     if not any(r in elevated for r in current.roles):
@@ -344,7 +341,8 @@ def get_goalposts(
 ):
     """
     Retorna los goalposts y estrategias de normalización de una versión.
-    Acceso: todos los roles autenticados (incluye `player`).
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     row = db.execute(
         text("""SELECT version_tag, published_at, description, goalposts, is_active

@@ -18,7 +18,7 @@ def get_meta_info():
     Metadatos de la API y del entorno.
     Pensado para debugging / monitoreo.
 
-    Acceso: abierto a todos.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     api_version = os.getenv("API_VERSION", "1.0.0")
     environment = os.getenv("APP_ENV", "production")

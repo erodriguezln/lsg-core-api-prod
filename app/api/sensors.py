@@ -73,7 +73,7 @@ def list_sensors(db: Session = Depends(get_db)):
 
     Ejemplos de sensores: Google Fit, Apple Health, Fitbit, Garmin, wearable propio.
 
-    **Acceso:** todos los roles.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     rows = db.execute(
         text("""
@@ -104,7 +104,7 @@ def create_sensor(
     Después de crear el sensor, usa `POST /sensors/{id}/endpoints`
     para agregar sus endpoints de ingestión.
 
-    **Acceso:** admin, researcher.
+    **Roles disponibles:** "admin", "researcher"  
     """
     try:
         result = db.execute(
@@ -144,7 +144,7 @@ def list_sensor_endpoints(
     El `id_sensor_endpoint` obtenido aquí es el que se usa en
     `POST /sensors/ingest/webhook` como parámetro `sensor_endpoint_id`.
 
-    **Acceso:** todos los roles.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     rows = db.execute(
         text("""
@@ -180,7 +180,7 @@ def create_sensor_endpoint(
     - `POST /sensors/players/{player_id}/link-endpoint`
     - `POST /sensors/ingest/webhook`
 
-    **Acceso:** admin, researcher.
+    **Roles disponibles:** "admin", "researcher"  
     """
     import json
     try:
@@ -235,7 +235,7 @@ def get_player_sensors(
     - `id_players_sensor_endpoint`: ID del vínculo jugador↔endpoint (para ingest).
     - `activated`: si el endpoint está activo para ingesta automática.
 
-    **Acceso:** player (solo sus datos), teacher, researcher, admin.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     rows = db.execute(
         text("""
@@ -292,7 +292,7 @@ def link_sensor_to_player(
     4. `POST /sensors/players/{player_id}/link-endpoint` → activar endpoint.
     5. Ahora se puede usar `POST /sensors/ingest/webhook` con los IDs obtenidos.
 
-    **Acceso:** admin, researcher.
+    **Roles disponibles:** "admin", "researcher"  
     """
     import json
     try:
@@ -353,7 +353,7 @@ def link_endpoint_to_player(
     **Prerequisito:** el jugador ya debe estar vinculado al sensor padre
     via `POST /sensors/players/{player_id}/link`.
 
-    **Acceso:** admin, researcher.
+    **Roles disponibles:** "admin", "researcher"  
     """
     try:
         result = db.execute(
@@ -417,9 +417,7 @@ def ingest_sensor_event(
     Si `players_sensor_endpoint_id` es null, el evento se registra
     sin vínculo a un endpoint configurado (ingesta manual/directa).
 
-    **Acceso:** todos los roles autenticados.
-    - `player`: solo puede ingestar para su propio `player_id`.
-    - `teacher / researcher / admin`: pueden ingestar para cualquier `player_id`.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     import json
 
@@ -484,7 +482,7 @@ def list_player_ingest_events(
     Devuelve los últimos eventos de sensor ingresados para un jugador,
     ordenados por fecha de ocurrencia descendente.
 
-    **Acceso:** player (solo sus datos), teacher, researcher, admin.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
     """
     rows = db.execute(
         text("""

@@ -18,7 +18,7 @@ def health_check():
     """
     Liveness básico: solo indica que la app está levantada.
 
-    Acceso: abierto a todos.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"   
     """
     return {"status": "ok"}
 
@@ -30,7 +30,7 @@ def health_full(db: Session = Depends(get_db)):
     - Chequea conexión a la base de datos.
     - Verifica acceso a vistas críticas.
 
-    Acceso: todos.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"   
     """
     checks = {}
 
