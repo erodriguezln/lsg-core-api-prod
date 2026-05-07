@@ -54,10 +54,15 @@ class SensorPlayerLinkRequest(BaseModel):
 
 
 class SensorEndpointPlayerLinkRequest(BaseModel):
-    """Activa un sensor_endpoint para un jugador específico."""
+    """
+    Activa un sensor_endpoint para un jugador específico.
+
+    `schedule_time`: entero en formato HHMM (hora × 100 + minutos).
+    Ejemplos: 800 = 08:00 | 1430 = 14:30 | None = sin horario fijo.
+    """
     sensor_endpoint_id: int
-    activated:          bool          = True
-    schedule_time:      Optional[str] = None   # ej: "08:00" para ingesta diaria
+    activated:          bool         = True
+    schedule_time:      Optional[int] = None   # HHMM: 800=08:00, 1430=14:30
 
 
 # GET: catálogo de sensores
