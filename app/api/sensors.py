@@ -15,6 +15,23 @@ from app.security import (
     ROLE_ALL,
 )
 
+def _parse_json(value):
+    """Parse a JSON string to dict/list if possible, return as-is otherwise."""
+    if isinstance(value, str):
+        try:
+            return _json.loads(value)
+        except (ValueError, TypeError):
+            pass
+    return value
+
+def _parse_sensor_fields(row: dict, fields: list) -> dict:
+    """Parse JSON string fields in a row dict."""
+    for f in fields:
+        if f in row:
+            row[f] = _parse_json(row[f])
+    return row
+
+
 router = APIRouter()
 
 
@@ -57,7 +74,7 @@ class SensorEndpointPlayerLinkRequest(BaseModel):
     """
     Activa un sensor_endpoint para un jugador específico.
 
-    `schedule_time`: entero en formato HHMM (hora × 100 + minutos).
+    `schedule_time`: entero en formato HHMM (hora * 100 + minutos).
     Ejemplos: 800 = 08:00 | 1430 = 14:30 | None = sin horario fijo.
     """
     sensor_endpoint_id: int
@@ -162,7 +179,8 @@ def list_sensor_endpoints(
         """),
         {"sid": sensor_id},
     ).mappings().all()
-    return list(rows)
+    json_fields = ["token_parameters", "specific_parameters", "watch_parameters"]
+    return [_parse_sensor_fields(dict(r), json_fields) for r in rows]
 
 
 # POST: crear endpoint de sensor
@@ -218,7 +236,9 @@ def create_sensor_endpoint(
         text("SELECT * FROM sensor_endpoint WHERE id_sensor_endpoint = :id"),
         {"id": new_id},
     ).mappings().first()
-    return dict(row)
+    result = dict(row)
+    json_fields = ["token_parameters", "specific_parameters", "watch_parameters"]
+    return _parse_sensor_fields(result, json_fields)
 
 
 # GET: sensores de un jugador
@@ -271,7 +291,7 @@ def get_player_sensors(
         """),
         {"pid": player_id},
     ).mappings().all()
-    return list(rows)
+    return [_parse_sensor_fields(dict(r), ["tokens"]) for r in rows]
 
 
 # POST: vincular sensor a jugador
@@ -533,4 +553,4 @@ def list_player_ingest_events(
         """),
         {"pid": player_id, "limit": limit},
     ).mappings().all()
-    return list(rows)
+    return [_parse_sensor_fields(dict(r), ["raw_payload"]) for r in rows]

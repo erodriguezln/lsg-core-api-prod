@@ -2,10 +2,9 @@ from typing import Optional, List
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, root_validator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
 import json
 
 from app.db import get_db
@@ -18,12 +17,17 @@ from app.security import (
 
 router = APIRouter(prefix="/admin", tags=["admin-config"])
 
+
+# =========================
+# Pydantic models
+# =========================
+
 # --- Attributes ---
 
 class AttributeBase(BaseModel):
     name: str
     description: Optional[str] = None
-    data_type: Optional[str] = None
+    data_type: Optional[str] = None  # según tu esquema (ej: "int", "float", "json")
 
 
 class AttributeCreate(AttributeBase):
@@ -66,20 +70,20 @@ class PointDimensionBase(BaseModel):
     code: str
     name: str
 
-    @model_validator(mode="after")
-    def validate_linked_entity(self):
+    @root_validator(skip_on_failure=True)
+    def validate_linked_entity(cls, values):
         """
         La tabla point_dimension tiene un CHECK que exige
         que se relacione a un atributo o a un subatributo, pero no ambos.
         """
-        attr = self.id_attributes
-        sub  = self.id_subattributes
+        attr = values.get("id_attributes")
+        sub = values.get("id_subattributes")
 
         if (attr is None and sub is None) or (attr is not None and sub is not None):
             raise ValueError(
                 "Debe indicar exactamente uno de id_attributes o id_subattributes"
             )
-        return self
+        return values
 
 
 class PointDimensionCreate(PointDimensionBase):
@@ -92,15 +96,16 @@ class PointDimensionUpdate(BaseModel):
     code: Optional[str] = None
     name: Optional[str] = None
 
-    @model_validator(mode="after")
-    def validate_linked_entity(self):
-        attr = self.id_attributes
-        sub  = self.id_subattributes
+    @root_validator(skip_on_failure=True)
+    def validate_linked_entity(cls, values):
+        # Si el update toca alguno de los dos, validamos que queden en estado coherente.
+        attr = values.get("id_attributes")
+        sub = values.get("id_subattributes")
         if attr is not None and sub is not None:
             raise ValueError(
                 "No puede establecer id_attributes e id_subattributes simultáneamente"
             )
-        return self
+        return values
 
 
 # --- Modifiable Mechanic ---
@@ -108,7 +113,7 @@ class PointDimensionUpdate(BaseModel):
 class ModifiableMechanicBase(BaseModel):
     name: str
     description: Optional[str] = None
-    type: Optional[str] = None
+    type: Optional[str] = None  # por ejemplo: "SPEED", "XP_RATE", etc.
 
 
 class ModifiableMechanicCreate(ModifiableMechanicBase):
@@ -126,7 +131,7 @@ class ModifiableMechanicUpdate(BaseModel):
 class ModifiableMechanicVGBase(BaseModel):
     id_videogame: int
     id_modifiable_mechanic: int
-    options: Optional[dict] = None
+    options: Optional[dict] = None  # la tabla usa JSON; se serializa en SQL
 
 
 class ModifiableMechanicVGCreate(ModifiableMechanicVGBase):
@@ -164,7 +169,7 @@ def admin_list_attributes(
     """
     # 28. GET /attributes
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     rows = db.execute(
         text(
@@ -195,7 +200,7 @@ def admin_get_attribute(
     """
     # 29. GET /attributes/{attribute_id}
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     row = _ensure_exists(
         db,
@@ -228,7 +233,7 @@ def admin_create_attribute(
     """
     # 30. POST /attributes
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     try:
         result = db.execute(
@@ -266,9 +271,9 @@ def admin_update_attribute(
     """
     # 31. PUT /attributes/{attribute_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
-
+    # Verificamos existencia
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -319,8 +324,9 @@ def admin_delete_attribute(
     """
     # 32. DELETE /attributes/{attribute_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
+    # Verificamos existencia
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -336,6 +342,7 @@ def admin_delete_attribute(
         db.commit()
     except Exception as e:
         db.rollback()
+        # conflicto con FKs, etc.
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Error deleting attribute (probably in use): {e}",
@@ -357,7 +364,7 @@ def admin_list_subattributes(
     """
     # 33. GET /subattributes
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     base = """
         SELECT
@@ -389,7 +396,7 @@ def admin_get_subattribute(
     """
     # 34. GET /subattributes/{sub_id}
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     row = _ensure_exists(
         db,
@@ -422,8 +429,9 @@ def admin_create_subattribute(
     """
     # 35. POST /subattributes
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
+    # Aseguramos que el atributo exista
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -477,7 +485,7 @@ def admin_update_subattribute(
     """
     # 36. PUT /subattributes/{sub_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     _ensure_exists(
         db,
@@ -490,6 +498,7 @@ def admin_update_subattribute(
     params = {"id": sub_id}
 
     if payload.attribute_id is not None:
+        # validar existencia del atributo nuevo
         _ensure_exists(
             db,
             "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -539,7 +548,7 @@ def admin_delete_subattribute(
     """
     # 37. DELETE /subattributes/{sub_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     _ensure_exists(
         db,
@@ -576,7 +585,7 @@ def admin_list_point_dimensions(
     """
     # 38. GET /point-dimensions
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     rows = db.execute(
         text(
@@ -606,7 +615,7 @@ def admin_get_point_dimension(
     """
     # 39. GET /point-dimensions/{pd_id}
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     row = _ensure_exists(
         db,
@@ -638,8 +647,9 @@ def admin_create_point_dimension(
     """
     # 40. POST /point-dimensions
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
+    # Validamos FKs si se entregan
     if payload.id_attributes is not None:
         _ensure_exists(
             db,
@@ -703,7 +713,7 @@ def admin_update_point_dimension(
     """
     # 41. PUT /point-dimensions/{pd_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     _ensure_exists(
         db,
@@ -724,6 +734,7 @@ def admin_update_point_dimension(
         )
         fields.append("id_attributes = :id_attributes")
         params["id_attributes"] = payload.id_attributes
+        # si cambiamos a atributo, anulamos subatributo
         fields.append("id_subattributes = NULL")
 
     if payload.id_subattributes is not None:
@@ -735,6 +746,7 @@ def admin_update_point_dimension(
         )
         fields.append("id_subattributes = :id_subattributes")
         params["id_subattributes"] = payload.id_subattributes
+        # si cambiamos a subatributo, anulamos atributo
         fields.append("id_attributes = NULL")
 
     if payload.code is not None:
@@ -778,7 +790,7 @@ def admin_delete_point_dimension(
     """
     # 42. DELETE /point-dimensions/{pd_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     _ensure_exists(
         db,
@@ -815,7 +827,7 @@ def admin_list_mod_mechanics(
     """
     # 43. GET /modifiable-mechanics
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     rows = db.execute(
         text(
@@ -844,7 +856,7 @@ def admin_get_mod_mechanic(
     """
     # 44. GET /modifiable-mechanics/{mm_id}
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     row = _ensure_exists(
         db,
@@ -875,7 +887,7 @@ def admin_create_mod_mechanic(
     """
     # 45. POST /modifiable-mechanics
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     try:
         result = db.execute(
@@ -915,7 +927,7 @@ def admin_update_mod_mechanic(
     """
     # 46. PUT /modifiable-mechanics/{mm_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     _ensure_exists(
         db,
@@ -973,7 +985,7 @@ def admin_delete_mod_mechanic(
     """
     # 47. DELETE /modifiable-mechanics/{mm_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     _ensure_exists(
         db,
@@ -1013,7 +1025,7 @@ def admin_list_mod_mech_vg(
     """
     # 48. GET /modifiable-mechanics-videogames
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     base = """
         SELECT
@@ -1033,7 +1045,12 @@ def admin_list_mod_mech_vg(
         params["vgid"] = videogame_id
 
     rows = db.execute(text(base), params).mappings().all()
-    return list(rows)
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["options"] = _parse_json(d.get("options"))
+        result.append(d)
+    return result
 
 
 @router.get(
@@ -1047,7 +1064,7 @@ def admin_get_mod_mech_vg(
     """
     # 49. GET /modifiable-mechanics-videogames/{mmv_id}
 
-    **Roles disponibles:** "admin", "researcher"
+    Acceso: admin, researcher.
     """
     row = _ensure_exists(
         db,
@@ -1067,7 +1084,9 @@ def admin_get_mod_mech_vg(
         {"id": mmv_id},
         "Modifiable mechanic videogame config not found",
     )
-    return dict(row)
+    result = dict(row)
+    result["options"] = _parse_json(result.get("options"))
+    return result
 
 
 @router.post(
@@ -1082,8 +1101,18 @@ def admin_create_mod_mech_vg(
     """
     # 50. POST /modifiable-mechanics-videogames
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
+    import json
+
+def _parse_json(v):
+    if isinstance(v, str):
+        try: return json.loads(v)
+        except: pass
+    return v
+
+
+    # Validamos FKs
     _ensure_exists(
         db,
         "SELECT id_videogame FROM videogame WHERE id_videogame = :id",
@@ -1143,8 +1172,17 @@ def admin_update_mod_mech_vg(
     """
     # 51. PUT /modifiable-mechanics-videogames/{mmv_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
+    import json
+
+def _parse_json(v):
+    if isinstance(v, str):
+        try: return json.loads(v)
+        except: pass
+    return v
+
+
     _ensure_exists(
         db,
         "SELECT id_modifiable_mechanic_videogame FROM modifiable_mechanic_videogames WHERE id_modifiable_mechanic_videogame = :id",
@@ -1213,7 +1251,7 @@ def admin_delete_mod_mech_vg(
     """
     # 52. DELETE /modifiable-mechanics-videogames/{mmv_id}
 
-    **Roles disponibles:** "admin"
+    Acceso: admin.
     """
     _ensure_exists(
         db,

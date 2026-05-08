@@ -17,10 +17,11 @@ router = APIRouter()
 
 # Constantes del modelo
 
-T_MAX_MINUTES = 90.0    # límite de sesión para IAR (paper Sección III.C)
+T_MAX_MINUTES = 90.0    # límite de sesión para IAR
 IAR_W1        = 0.6     # peso IC_LSG en IAR
 IAR_W2        = 0.4     # peso tiempo en IAR (w1+w2=1)
 WINDOW_DAYS   = 7       # ventana temporal del índice
+
 
 # Schemas
 
@@ -55,6 +56,7 @@ class IC2ComputeResponse(BaseModel):
     rules_triggered: List[str]
     admissibility:   Dict[str, bool]
     id_ic2_result:   int
+
 
 # Normalización F1-F4
 
@@ -99,7 +101,7 @@ def _arith_mean(*vals: Optional[float]) -> Optional[float]:
 
 
 def _geo_mean(*vals: Optional[float]) -> Optional[float]:
-    """Promedio geométrico sin ponderación. None si todos son None."""
+    """Promedio geométrico sin ponderación (Ec.5-7). None si todos son None."""
     valid = [v for v in vals if v is not None]
     if not valid:
         return None
@@ -109,7 +111,7 @@ def _geo_mean(*vals: Optional[float]) -> Optional[float]:
     return round(product ** (1.0 / len(valid)), 4)
 
 
-# Catálogo de reglas R1-R6
+# ── Catálogo de reglas R1-R6 (Tabla II, SCCC 2026) ───────────────────────────
 
 def _evaluate_rules(IC_fis: Optional[float], IC_ment: Optional[float],
                     IC_LSG: Optional[float]) -> List[str]:
@@ -127,7 +129,8 @@ def _evaluate_rules(IC_fis: Optional[float], IC_ment: Optional[float],
         rules.append("R6")
     return rules
 
-# Endpoints
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/compute", response_model=IC2ComputeResponse,
              summary="Calcular IC² LSG para un jugador")
@@ -137,11 +140,13 @@ def compute_ic2(
     current: CurrentUser = Depends(get_current_user),
 ):
     """
-    Recibe señales crudas, normaliza con F1-F4, agrega con
-    promedio geométrico y calcula IAR.
-    Persiste en `ic2_result` e `interaction_logs`.
+    Recibe señales crudas, normaliza con F1-F4 (Ec.1-4), agrega con
+    promedio geométrico (Ec.5-7) y calcula IAR (Ec.8).
+    Persiste en `ic2_result` e `interaction_logs` (trazabilidad).
 
-    **Roles disponibles:** "admin", "researcher", "teacher"
+    **Acceso:**
+    - `player`: solo su propio IC².
+    - `teacher / researcher / admin`: cualquier player.
     """
     elevated = {"admin", "researcher", "teacher"}
     if not any(r in elevated for r in current.roles):
@@ -295,7 +300,8 @@ def get_ic2_history(
     """
     Historial de resultados IC² de un jugador, ordenado cronológicamente inverso.
 
-    **Roles disponibles:** "admin", "researcher", "teacher"
+    **Acceso:** `teacher`, `researcher`, `admin` para cualquier player;
+    `player` solo su propio historial.
     """
     elevated = {"admin", "researcher", "teacher"}
     if not any(r in elevated for r in current.roles):
@@ -330,7 +336,16 @@ def get_ic2_history(
 
     base += " ORDER BY r.computed_at DESC LIMIT :limit"
     rows = db.execute(text(base), params).mappings().all()
-    return {"player_id": player_id, "count": len(rows), "items": list(rows)}
+    items = []
+    for r in rows:
+        d = dict(r)
+        if isinstance(d.get("admissibility"), str):
+            try:
+                d["admissibility"] = json.loads(d["admissibility"])
+            except (ValueError, TypeError):
+                pass
+        items.append(d)
+    return {"player_id": player_id, "count": len(items), "items": items}
 
 
 @router.get("/goalposts", summary="Goalposts vigentes de una versión IC²")
@@ -341,8 +356,7 @@ def get_goalposts(
 ):
     """
     Retorna los goalposts y estrategias de normalización de una versión.
-
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    Acceso: todos los roles autenticados (incluye `player`).
     """
     row = db.execute(
         text("""SELECT version_tag, published_at, description, goalposts, is_active
