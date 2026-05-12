@@ -15,6 +15,8 @@ router = APIRouter(tags=["meta"])
 @router.get("/info", dependencies=[Depends(require_roles(ROLE_ALL))])
 def get_meta_info():
     """
+    # GET /meta/info
+
     Metadatos de la API y del entorno.
     Pensado para debugging / monitoreo.
 

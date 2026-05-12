@@ -18,8 +18,7 @@ from app.security import (
 
 router = APIRouter()
 
-
-# ---------- Models ----------
+# Models
 
 class RedeemRequest(BaseModel):
     modifiable_mechanic_videogame_id: int
@@ -55,7 +54,7 @@ class ConnectRequest(BaseModel):
     settings: Optional[dict] = None
 
 
-# ---------- Helpers ----------
+# Helpers
 
 def _get_player_global_dimension_balance(
     db: Session,
@@ -119,7 +118,7 @@ def _assert_mmv_exists_for_game(db: Session, game_id: int, mmv_id: int) -> None:
         )
 
 
-# ---------- Videogames ----------
+# Videogames
 
 @router.get("", dependencies=[Depends(require_roles(ROLE_ALL))])
 def list_videogames(
@@ -206,6 +205,7 @@ def create_videogame(
 ):
     """
     # POST /videogames
+
     Crea un nuevo videojuego.
 
     **Roles disponibles:** "admin", "researcher"    
@@ -340,7 +340,7 @@ def get_videogame_mechanics(
     return result
 
 
-# ---------- Redemptions ----------
+# Redemptions
 
 @router.post("/{game_id}/players/{player_id}/redeem/preview", dependencies=[Depends(guard_player_access)])
 def preview_redeem_mechanic(
@@ -350,7 +350,7 @@ def preview_redeem_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    # Preview de canje (sin modificaciones).
+    # POST /videogames/{game_id}/players/{player_id}/redeem/preview
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
@@ -386,7 +386,7 @@ def redeem_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    # Canje robusto con verificación de saldo y transacción atómica.
+    # POST /videogames/{game_id}/players/{player_id}/redeem
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
@@ -500,7 +500,7 @@ def redeem_mechanic(
     }
 
 
-# ---------- Game Sessions ----------
+# Game Sessions
 
 def _get_or_create_player_videogame(
     db: Session,
@@ -676,7 +676,7 @@ def end_session(
     return {"status": "ended", "id_session": session_id}
 
 
-# ---------- Mechanics ----------
+# Mechanics
 
 @router.post("/mechanics/catalog", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def create_modifiable_mechanic(

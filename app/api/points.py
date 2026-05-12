@@ -17,7 +17,7 @@ from app.security import (
 router = APIRouter()
 
 
-# ---------- Models ----------
+# Models
 
 class PointsAdjustRequest(BaseModel):
     point_dimension_id: int = Field(..., alias="point_dimension_id")
@@ -27,7 +27,7 @@ class PointsAdjustRequest(BaseModel):
     videogame_id: Optional[int] = None
 
 
-# ---------- Attributes & Subattributes ----------
+# Attributes & Subattributes
 
 @router.get("/attributes", tags=["attributes"], dependencies=[Depends(require_roles(ROLE_ALL))])
 def list_attributes(
@@ -85,6 +85,7 @@ def get_attributes_map(
 ):
     """
     # GET /attributes-map
+
     Usa la función sp_get_att_subattributes_name() que retorna JSON.
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"    
@@ -107,7 +108,7 @@ def get_attributes_map(
     return data
 
 
-# ---------- Points & Balances ----------
+# Points & Balances
 
 @router.get("/players/{player_id}/points/balance", tags=["points"], dependencies=[Depends(guard_player_access)])
 def get_player_points_balance(
@@ -116,6 +117,7 @@ def get_player_points_balance(
 ):
     """
     # GET /players/{player_id}/points/balance
+
     Lee desde v_points_balance.
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"    
@@ -144,6 +146,7 @@ def get_player_attribute_points(
 ):
     """
     # GET /players/{player_id}/attributes/points
+
     Usa la vista v_player_attribute_balance.
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"    
@@ -181,6 +184,7 @@ def get_points_ledger(
 ):
     """
     # GET /points/ledger
+
     Consulta filtrable del ledger de puntos.
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"    
@@ -237,6 +241,7 @@ def adjust_player_points(
 ):
     """
     # POST /players/{player_id}/points/adjust
+
     Inserta un ajuste manual en points_ledger (source_type='ADJUST').
 
     **Roles disponibles:** "admin", "researcher"  

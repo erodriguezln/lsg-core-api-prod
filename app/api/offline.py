@@ -101,6 +101,8 @@ def sync_offline_events(
     current: CurrentUser = Depends(get_current_user),
 ):
     """
+    # POST /offline/sync
+
     Sincroniza un lote de eventos de puntos generados offline por el mod
     del cliente (Starbound, BG3, etc.).
 
@@ -303,10 +305,12 @@ def get_offline_queue(
     db: Session = Depends(get_db),
     current: CurrentUser = Depends(get_current_user),
 ):
-    """
+    """ 
+    # GET /offline/queue
+
     Consulta el estado de los eventos en la cola offline de un jugador.
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     elevated = {"admin", "researcher"}
     if not any(r in elevated for r in current.roles):

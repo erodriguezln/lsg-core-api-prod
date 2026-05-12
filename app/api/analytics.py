@@ -21,7 +21,8 @@ def get_points_balance(
     db: Session = Depends(get_db),
 ):
     """
-    # 25. GET /analytics/points-balance
+    # GET /analytics/points-balance
+
     Lee desde v_points_balance.
 
     **Roles disponibles:** "admin", "researcher"
@@ -45,7 +46,8 @@ def get_player_game_overview(
     db: Session = Depends(get_db),
 ):
     """
-    # 24. GET /analytics/player-game-overview
+    # GET /analytics/player-game-overview
+
     Usa v_player_game_overview.
 
     **Roles disponibles:** "admin", "researcher"
@@ -85,7 +87,8 @@ def get_player_attribute_balance(
     db: Session = Depends(get_db),
 ):
     """
-    # 26. GET /analytics/player-attribute-balance
+    # GET /analytics/player-attribute-balance
+    
     Usa v_player_attribute_balance.
 
     **Roles disponibles:** "admin", "researcher"
@@ -124,7 +127,8 @@ def get_time_to_first_redeem(
     db: Session = Depends(get_db),
 ):
     """
-    # 27. GET /analytics/games/time-to-first-redeem
+    # GET /analytics/games/time-to-first-redeem
+    
     Versión simple: tiempo promedio (en minutos) desde primera sesión
     hasta primer canje, por juego.
 
@@ -165,9 +169,7 @@ def get_time_to_first_redeem(
     rows = db.execute(text(query)).mappings().all()
     return list(rows)
 
-
-# ---------- Data quality & sensores ----------
-
+# Data quality & sensores
 
 @router.get("/sensors/quality", dependencies=[Depends(require_roles(["admin", "researcher"]))] )
 def get_sensors_quality(
@@ -186,7 +188,7 @@ def get_sensors_quality(
     db: Session = Depends(get_db),
 ):
     """
-    # 28. GET /analytics/sensors/quality
+    # GET /analytics/sensors/quality
 
     Resumen de calidad de ingestión por jugador + endpoint:
 
@@ -288,7 +290,7 @@ def get_sensors_ingest_vs_points(
     db: Session = Depends(get_db),
 ):
     """
-    # 29. GET /analytics/sensors/ingest-vs-points
+    # GET /analytics/sensors/ingest-vs-points
 
     Mira la cadena sensor -> points_ledger (source_type='SENSOR', direction='CREDIT'):
 
@@ -390,6 +392,8 @@ def get_ic2_summary(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /analytics/ic2/summary
+
     Resumen estadístico agregado de IC² por condición y período.
 
     Retorna por `experiment_tag`:

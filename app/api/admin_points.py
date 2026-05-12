@@ -43,7 +43,7 @@ def admin_points_consistency_check(
     db: Session = Depends(get_db),
 ):
     """
-    Ejecuta un conjunto de checks de consistencia sobre puntos.
+    # GET /consistency-check
 
     Invariantes revisadas:
 

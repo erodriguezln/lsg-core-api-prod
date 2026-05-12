@@ -144,9 +144,7 @@ class ModifiableMechanicVGUpdate(BaseModel):
     options: Optional[dict] = None
 
 
-# =========================
 # Helpers
-# =========================
 
 def _ensure_exists(db: Session, query: str, params: dict, not_found_msg: str):
     row = db.execute(text(query), params).mappings().first()
@@ -155,9 +153,7 @@ def _ensure_exists(db: Session, query: str, params: dict, not_found_msg: str):
     return row
 
 
-# =========================
 # Attributes CRUD
-# =========================
 
 @router.get(
     "/attributes",
@@ -167,9 +163,9 @@ def admin_list_attributes(
     db: Session = Depends(get_db),
 ):
     """
-    # 28. GET /attributes
+    # GET /attributes
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     rows = db.execute(
         text(
@@ -198,9 +194,9 @@ def admin_get_attribute(
     db: Session = Depends(get_db),
 ):
     """
-    # 29. GET /attributes/{attribute_id}
+    # GET /attributes/{attribute_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -231,9 +227,9 @@ def admin_create_attribute(
     db: Session = Depends(get_db),
 ):
     """
-    # 30. POST /attributes
+    # POST /attributes
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     try:
         result = db.execute(
@@ -269,9 +265,9 @@ def admin_update_attribute(
     db: Session = Depends(get_db),
 ):
     """
-    # 31. PUT /attributes/{attribute_id}
+    # PUT /attributes/{attribute_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     # Verificamos existencia
     _ensure_exists(
@@ -322,9 +318,9 @@ def admin_delete_attribute(
     db: Session = Depends(get_db),
 ):
     """
-    # 32. DELETE /attributes/{attribute_id}
+    # DELETE /attributes/{attribute_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     # Verificamos existencia
     _ensure_exists(
@@ -349,9 +345,7 @@ def admin_delete_attribute(
         )
 
 
-# =========================
 # Subattributes CRUD
-# =========================
 
 @router.get(
     "/subattributes",
@@ -362,9 +356,9 @@ def admin_list_subattributes(
     db: Session = Depends(get_db),
 ):
     """
-    # 33. GET /subattributes
+    # GET /subattributes
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base = """
         SELECT
@@ -394,9 +388,9 @@ def admin_get_subattribute(
     db: Session = Depends(get_db),
 ):
     """
-    # 34. GET /subattributes/{sub_id}
+    # GET /subattributes/{sub_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -427,11 +421,10 @@ def admin_create_subattribute(
     db: Session = Depends(get_db),
 ):
     """
-    # 35. POST /subattributes
+    # POST /subattributes
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
-    # Aseguramos que el atributo exista
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -483,9 +476,9 @@ def admin_update_subattribute(
     db: Session = Depends(get_db),
 ):
     """
-    # 36. PUT /subattributes/{sub_id}
+    # PUT /subattributes/{sub_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -546,9 +539,9 @@ def admin_delete_subattribute(
     db: Session = Depends(get_db),
 ):
     """
-    # 37. DELETE /subattributes/{sub_id}
+    # DELETE /subattributes/{sub_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -571,9 +564,7 @@ def admin_delete_subattribute(
         )
 
 
-# =========================
 # Point Dimension CRUD
-# =========================
 
 @router.get(
     "/point-dimensions",
@@ -583,9 +574,9 @@ def admin_list_point_dimensions(
     db: Session = Depends(get_db),
 ):
     """
-    # 38. GET /point-dimensions
+    # GET /point-dimensions
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     rows = db.execute(
         text(
@@ -613,9 +604,9 @@ def admin_get_point_dimension(
     db: Session = Depends(get_db),
 ):
     """
-    # 39. GET /point-dimensions/{pd_id}
+    # GET /point-dimensions/{pd_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -645,9 +636,9 @@ def admin_create_point_dimension(
     db: Session = Depends(get_db),
 ):
     """
-    # 40. POST /point-dimensions
+    # POST /point-dimensions
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     # Validamos FKs si se entregan
     if payload.id_attributes is not None:
@@ -711,9 +702,9 @@ def admin_update_point_dimension(
     db: Session = Depends(get_db),
 ):
     """
-    # 41. PUT /point-dimensions/{pd_id}
+    # PUT /point-dimensions/{pd_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -788,9 +779,9 @@ def admin_delete_point_dimension(
     db: Session = Depends(get_db),
 ):
     """
-    # 42. DELETE /point-dimensions/{pd_id}
+    # DELETE /point-dimensions/{pd_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -813,9 +804,7 @@ def admin_delete_point_dimension(
         )
 
 
-# =========================
 # Modifiable Mechanic CRUD
-# =========================
 
 @router.get(
     "/modifiable-mechanics",
@@ -825,9 +814,9 @@ def admin_list_mod_mechanics(
     db: Session = Depends(get_db),
 ):
     """
-    # 43. GET /modifiable-mechanics
+    # GET /modifiable-mechanics
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     rows = db.execute(
         text(
@@ -854,9 +843,9 @@ def admin_get_mod_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    # 44. GET /modifiable-mechanics/{mm_id}
+    # GET /modifiable-mechanics/{mm_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -885,9 +874,9 @@ def admin_create_mod_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    # 45. POST /modifiable-mechanics
+    # POST /modifiable-mechanics
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     try:
         result = db.execute(
@@ -925,9 +914,9 @@ def admin_update_mod_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    # 46. PUT /modifiable-mechanics/{mm_id}
+    # PUT /modifiable-mechanics/{mm_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -983,9 +972,9 @@ def admin_delete_mod_mechanic(
     db: Session = Depends(get_db),
 ):
     """
-    # 47. DELETE /modifiable-mechanics/{mm_id}
+    # DELETE /modifiable-mechanics/{mm_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,
@@ -1010,9 +999,7 @@ def admin_delete_mod_mechanic(
         )
 
 
-# =========================
 # Modifiable Mechanic Videogames CRUD
-# =========================
 
 @router.get(
     "/modifiable-mechanics-videogames",
@@ -1023,9 +1010,9 @@ def admin_list_mod_mech_vg(
     db: Session = Depends(get_db),
 ):
     """
-    # 48. GET /modifiable-mechanics-videogames
+    # GET /modifiable-mechanics-videogames
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     base = """
         SELECT
@@ -1062,9 +1049,9 @@ def admin_get_mod_mech_vg(
     db: Session = Depends(get_db),
 ):
     """
-    # 49. GET /modifiable-mechanics-videogames/{mmv_id}
+    # GET /modifiable-mechanics-videogames/{mmv_id}
 
-    Acceso: admin, researcher.
+    **Roles disponibles:** "admin", "researcher"
     """
     row = _ensure_exists(
         db,
@@ -1099,9 +1086,9 @@ def admin_create_mod_mech_vg(
     db: Session = Depends(get_db),
 ):
     """
-    # 50. POST /modifiable-mechanics-videogames
+    # POST /modifiable-mechanics-videogames
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     import json
 
@@ -1170,9 +1157,9 @@ def admin_update_mod_mech_vg(
     db: Session = Depends(get_db),
 ):
     """
-    # 51. PUT /modifiable-mechanics-videogames/{mmv_id}
+    # PUT /modifiable-mechanics-videogames/{mmv_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     import json
 
@@ -1249,9 +1236,9 @@ def admin_delete_mod_mech_vg(
     db: Session = Depends(get_db),
 ):
     """
-    # 52. DELETE /modifiable-mechanics-videogames/{mmv_id}
+    # DELETE /modifiable-mechanics-videogames/{mmv_id}
 
-    Acceso: admin.
+    **Roles disponibles:** "admin"
     """
     _ensure_exists(
         db,

@@ -91,6 +91,8 @@ class SensorEndpointPlayerLinkRequest(BaseModel):
 )
 def list_sensors(db: Session = Depends(get_db)):
     """
+    # GET /sensors
+
     Devuelve el catálogo de proveedores de sensores online configurados en LSG.
 
     Ejemplos de sensores: Google Fit, Apple Health, Fitbit, Garmin, wearable propio.
@@ -114,13 +116,15 @@ def list_sensors(db: Session = Depends(get_db)):
     "",
     status_code=201,
     dependencies=[Depends(require_roles(["admin", "researcher"]))],
-    summary="Crear nuevo sensor (admin, researcher)",
+    summary="Crear nuevo sensor",
 )
 def create_sensor(
     payload: SensorCreateRequest,
     db: Session = Depends(get_db),
 ):
     """
+    # POST /sensors
+
     Agrega un nuevo proveedor de sensor al catálogo LSG.
 
     Después de crear el sensor, usa `POST /sensors/{id}/endpoints`
@@ -161,6 +165,8 @@ def list_sensor_endpoints(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /sensors/{sensor_id}/endpoints
+
     Lista los endpoints de ingestión disponibles para un sensor.
 
     El `id_sensor_endpoint` obtenido aquí es el que se usa en
@@ -189,7 +195,7 @@ def list_sensor_endpoints(
     "/{sensor_id}/endpoints",
     status_code=201,
     dependencies=[Depends(require_roles(["admin", "researcher"]))],
-    summary="Agregar endpoint a un sensor (admin, researcher)",
+    summary="Agregar endpoint a un sensor",
 )
 def create_sensor_endpoint(
     sensor_id: int,
@@ -197,6 +203,8 @@ def create_sensor_endpoint(
     db: Session = Depends(get_db),
 ):
     """
+    # POST /sensors/{sensor_id}/endpoints
+
     Agrega un endpoint de ingestión a un sensor existente.
 
     El `id_sensor_endpoint` generado es necesario para:
@@ -253,6 +261,8 @@ def get_player_sensors(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /sensors/players/{player_id}
+
     Devuelve todos los sensores y endpoints activos asociados a un jugador.
 
     Incluye:
@@ -300,7 +310,7 @@ def get_player_sensors(
     "/players/{player_id}/link",
     status_code=201,
     dependencies=[Depends(require_roles(["admin", "researcher"]))],
-    summary="Vincular sensor a un jugador (admin, researcher)",
+    summary="Vincular sensor a un jugador",
 )
 def link_sensor_to_player(
     player_id: int,
@@ -308,6 +318,8 @@ def link_sensor_to_player(
     db: Session = Depends(get_db),
 ):
     """
+    # POST /sensors/players/{player_id}/link
+
     Asocia un sensor online a un jugador (crea entrada en `player_online_sensor`).
 
     **Flujo completo para un nuevo sensor:**
@@ -363,7 +375,7 @@ def link_sensor_to_player(
     "/players/{player_id}/link-endpoint",
     status_code=201,
     dependencies=[Depends(require_roles(["admin", "researcher"]))],
-    summary="Activar endpoint de sensor para un jugador (admin, researcher)",
+    summary="Activar endpoint de sensor para un jugador",
 )
 def link_endpoint_to_player(
     player_id: int,
@@ -371,6 +383,8 @@ def link_endpoint_to_player(
     db: Session = Depends(get_db),
 ):
     """
+    # POST /sensors/players/{player_id}/link-endpoint
+
     Activa un `sensor_endpoint` específico para un jugador.
     El `id_players_sensor_endpoint` generado es el que se usa en
     `POST /sensors/ingest/webhook` como `players_sensor_endpoint_id`.
@@ -429,6 +443,8 @@ def ingest_sensor_event(
     current: CurrentUser = Depends(get_current_user),
 ):
     """
+    # POST /sensors/ingest/webhook
+
     Inserta un evento de sensor en `sensor_ingest_event`.
 
     **Flujo para obtener los IDs requeridos:**
@@ -534,6 +550,8 @@ def list_player_ingest_events(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /sensors/players/{player_id}/ingest-events
+
     Devuelve los últimos eventos de sensor ingresados para un jugador,
     ordenados por fecha de ocurrencia descendente.
 

@@ -111,7 +111,7 @@ def _geo_mean(*vals: Optional[float]) -> Optional[float]:
     return round(product ** (1.0 / len(valid)), 4)
 
 
-# ── Catálogo de reglas R1-R6 (Tabla II, SCCC 2026) ───────────────────────────
+# Catálogo de reglas R1-R6
 
 def _evaluate_rules(IC_fis: Optional[float], IC_ment: Optional[float],
                     IC_LSG: Optional[float]) -> List[str]:
@@ -130,7 +130,7 @@ def _evaluate_rules(IC_fis: Optional[float], IC_ment: Optional[float],
     return rules
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# Endpoints
 
 @router.post("/compute", response_model=IC2ComputeResponse,
              summary="Calcular IC² LSG para un jugador")
@@ -140,13 +140,16 @@ def compute_ic2(
     current: CurrentUser = Depends(get_current_user),
 ):
     """
-    Recibe señales crudas, normaliza con F1-F4 (Ec.1-4), agrega con
-    promedio geométrico (Ec.5-7) y calcula IAR (Ec.8).
+    # POST /ic2/compute
+
+    Recibe señales crudas, normaliza con F1-F4, agrega con
+    promedio geométrico y calcula IAR.
     Persiste en `ic2_result` e `interaction_logs` (trazabilidad).
 
     **Acceso:**
     - `player`: solo su propio IC².
-    - `teacher / researcher / admin`: cualquier player.
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     elevated = {"admin", "researcher", "teacher"}
     if not any(r in elevated for r in current.roles):
@@ -298,10 +301,11 @@ def get_ic2_history(
     current: CurrentUser = Depends(get_current_user),
 ):
     """
+    # GET /ic2/history
+
     Historial de resultados IC² de un jugador, ordenado cronológicamente inverso.
 
-    **Acceso:** `teacher`, `researcher`, `admin` para cualquier player;
-    `player` solo su propio historial.
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     elevated = {"admin", "researcher", "teacher"}
     if not any(r in elevated for r in current.roles):
@@ -350,13 +354,16 @@ def get_ic2_history(
 
 @router.get("/goalposts", summary="Goalposts vigentes de una versión IC²")
 def get_goalposts(
-    version_tag: str = Query("v1.0-SCCC2026"),
+    version_tag: str = Query("v1.0"),
     db: Session = Depends(get_db),
     _: CurrentUser = Depends(get_current_user),
 ):
     """
+    # GET /ic2/goalposts
+
     Retorna los goalposts y estrategias de normalización de una versión.
-    Acceso: todos los roles autenticados (incluye `player`).
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "student"
     """
     row = db.execute(
         text("""SELECT version_tag, published_at, description, goalposts, is_active

@@ -26,6 +26,7 @@ def list_players(
 ):
     """
     # GET /players
+
     Lista jugadores con paginación.
 
     **Roles disponibles:** "admin", "researcher", "teacher"  
@@ -78,6 +79,7 @@ def get_player(
 ):
     """
     # GET /players/{player_id}
+
     Detalle de un jugador.
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"    
@@ -118,6 +120,7 @@ def delete_player(
 ):
     """
     # DELETE /players/{player_id}
+
     Llama a sp_delete_player_cascade para borrar en cascada.
 
     **Roles disponibles:** "admin"  
@@ -139,6 +142,7 @@ def init_player_attributes(
 ):
     """
     # POST /players/{player_id}/attributes/init
+
     Inicializa players_attributes para este jugador.
 
     **Roles disponibles:** "admin", "researcher", "teacher"  
@@ -165,6 +169,7 @@ def get_player_games(
 ):
     """
     # GET /players/{player_id}/games
+    
     Usa la vista v_player_game_overview.
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"    
@@ -203,6 +208,8 @@ def get_player_timeline(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /players/{player_id}/timeline
+    
     Timeline unificado del jugador (sesiones, puntos, sensores, canjes).
 
     Devuelve una lista mezclada cronológicamente de eventos:

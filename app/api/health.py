@@ -16,6 +16,8 @@ router = APIRouter(tags=["health"])
 @router.get("/health", dependencies=[Depends(require_roles(ROLE_ALL))])
 def health_check():
     """
+    # GET /health
+
     Liveness básico: solo indica que la app está levantada.
 
     **Roles disponibles:** "admin", "researcher", "teacher", "student"   
@@ -26,6 +28,8 @@ def health_check():
 @router.get("/health/full", dependencies=[Depends(require_roles(ROLE_ALL))])
 def health_full(db: Session = Depends(get_db)):
     """
+    # GET /health/full
+
     Readiness / health extendido:
     - Chequea conexión a la base de datos.
     - Verifica acceso a vistas críticas.

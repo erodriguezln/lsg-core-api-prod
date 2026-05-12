@@ -79,7 +79,7 @@ def _build_csv_response(rows: List[Dict[str, Any]], filename: str) -> Response:
     )
 
 
-# 1) Export: Points ledger
+# Export: Points ledger
 
 @router.get("/points", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_points(
@@ -98,6 +98,8 @@ def export_points(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /research/export/points
+
     Exporta movimientos de puntos (points_ledger) para análisis de investigación.
     Incluye seudonimización de identidad del jugador.
 
@@ -168,7 +170,7 @@ def export_points(
     return {"items": data, "count": len(data)}
 
 
-# 2) Export: Game sessions
+# Export: Game sessions
 
 @router.get("/sessions", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_sessions(
@@ -186,6 +188,8 @@ def export_sessions(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /research/export/sessions
+
     Exporta sesiones de juego (lsg_game_session + player_videogame + players).
 
     **Roles disponibles:** "admin", "researcher"  
@@ -246,7 +250,7 @@ def export_sessions(
     return {"items": data, "count": len(data)}
 
 
-# 3) Export: Sensor ingest
+# Export: Sensor ingest
 
 @router.get("/sensors", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_sensors(
@@ -264,6 +268,8 @@ def export_sensors(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /research/export/sensors
+
     Exporta eventos de sensor (sensor_ingest_event) con contexto.
     Nota ética: incluye raw_payload tal como existe en la tabla.
 
@@ -325,7 +331,7 @@ def export_sensors(
     return {"items": data, "count": len(data)}
 
 
-# 4) Export: IC² results
+# Export: IC² results
 
 @router.get("/ic2", dependencies=[Depends(require_roles(["admin", "researcher"]))])
 def export_ic2_results(
@@ -356,6 +362,8 @@ def export_ic2_results(
     db: Session = Depends(get_db),
 ):
     """
+    # GET /research/export/ic2
+
     Exporta resultados IC² (ic2_result) para análisis.
 
     Incluye: índices IC² (Icf, Isfg, Ipma, Itd, IC_fis, IC_ment, IC_LSG, IAR),
