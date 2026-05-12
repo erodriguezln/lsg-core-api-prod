@@ -86,8 +86,8 @@ docker logs -n 100 lsg_core_api
 
 `docker-entrypoint-initdb.d` ejecuta los archivos de `db/init/` en orden al crear el volumen:
 
-1. `01_db_lsg_dump.sql` — schema base y datos semilla
-2. `02_migrations.sql` — PATCH-01 a 07 (player_roles, IC², offline, source_type fix)
+1. `01_db_lsg_dump.sql` - schema base y datos semilla
+2. `02_migrations.sql` - PATCH-01 a 07 (player_roles, IC², offline, source_type fix)
 
 Para aplicar en BD existente:
 ```bash
@@ -140,7 +140,7 @@ El JWT incluye el claim `"roles": [...]` (lista). Un jugador puede tener múltip
 
 | Método | Ruta | Roles | Descripción |
 |--------|------|-------|-------------|
-| `GET` | `/health` | — | Liveness |
+| `GET` | `/health` | - | Liveness |
 | `GET` | `/health/full` | todos | Readiness: BD + vistas + tablas IC²/offline |
 | `GET` | `/meta/info` | todos | Versión, entorno, BD |
 
@@ -293,9 +293,9 @@ curl -X GET \
 
 ## Changelog
 
-### v1.2.1 (2026-05) — fixes de producción
+### v1.2.1 (2026-05) - fixes de producción
 
-- **BD — PATCH-07:** `source_type` ENUM de `points_ledger` extendido con `OFFLINE_GAME`. Resuelve error `Data truncated` en `POST /offline/sync`.
+- **BD - PATCH-07:** `source_type` ENUM de `points_ledger` extendido con `OFFLINE_GAME`. Resuelve error `Data truncated` en `POST /offline/sync`.
 - **`games.py`:** campo `options` en `GET /videogames/{id}/mechanics` parseado como JSON (era string). `interaction_logs` de `session_end` y `redeem` corregidos (`strftime` en vez de `str()` para timestamp).
 - **`ic2.py`:** campo `goalposts` en `GET /ic2/goalposts` parseado como JSON (era string).
 - **`points.py`:** `GET /attributes-map` parsea resultado del stored procedure como JSON.
@@ -305,24 +305,25 @@ curl -X GET \
 
 ### v1.2.0 (2026-05)
 
-- `ic2.py` — nuevo módulo: `POST /ic2/compute`, `GET /ic2/history`, `GET /ic2/goalposts`.
-- `offline.py` — nuevo módulo: `POST /offline/sync` (idempotente), `GET /offline/queue`.
-- `games.py` — `POST /{id}/mechanics/bulk` (hasta 500 mecánicas, HTTP 207). `PATCH sessions/{sid}/end` calcula `duration_seconds`.
+- `ic2.py` - nuevo módulo: `POST /ic2/compute`, `GET /ic2/history`, `GET /ic2/goalposts`.
+- `offline.py` - nuevo módulo: `POST /offline/sync` (idempotente), `GET /offline/queue`.
+- `games.py` - `POST /{id}/mechanics/bulk` (hasta 500 mecánicas, HTTP 207). `PATCH sessions/{sid}/end` calcula `duration_seconds`.
 - BD: PATCH-03 (tablas IC²), PATCH-04 (offline queue), PATCH-05 (sp_bulk_attach), PATCH-06 (R1-R6 + v_ic2_latest).
 
 ### v1.1.0 (2026-05)
 
-- `security.py` — `AUTH_OPEN_ALL=false` por defecto. `CurrentUser.roles` como lista con fallback legacy.
-- `games.py` — escritura restringida a researcher/admin.
-- `research_export.py` — acceso restringido a researcher/admin; guard duplicado eliminado.
-- `points.py` — `GET /points/ledger` fuerza filtro propio para rol `player`.
-- `sensors.py` — `POST /ingest/webhook` valida ownership de `player_id`.
-- `players.py` — `GET /players` y `GET /players/{id}` incluyen campo `roles: []`.
-- `admin_config.py` — migración a Pydantic v2 (`model_validator`).
+- `security.py` - `AUTH_OPEN_ALL=false` por defecto. `CurrentUser.roles` como lista con fallback legacy.
+- `games.py` - escritura restringida a researcher/admin.
+- `research_export.py` - acceso restringido a researcher/admin; guard duplicado eliminado.
+- `points.py` - `GET /points/ledger` fuerza filtro propio para rol `player`.
+- `sensors.py` - `POST /ingest/webhook` valida ownership de `player_id`.
+- `players.py` - `GET /players` y `GET /players/{id}` incluyen campo `roles: []`.
+- `admin_config.py` - migración a Pydantic v2 (`model_validator`).
 - BD: PATCH-01 (player_roles multi-rol), PATCH-02 (interaction_logs).
 
 ---
 
 ## Referencias
 
+- R. González-Ibáñez, J. I. Macías-Cáceres and M. V. Paucar, "LifeSync-Games: A Technical Note on a Novel Framework for Video Game Development," 2025 44th International Conference of the Chilean Computer Science Society (SCCC), Valparaiso, Chile, 2025, pp. 1-4, doi: 10.1109/SCCC67219.2025.11420722.
 - González-Ibáñez R., Macías-Cáceres J., Villalta-Paucar M. (2025). *LifeSync-Games: Toward a Video Game Paradigm for Promoting Responsible Gaming and Human Development*. arXiv:2510.19691 [cs.HC]. DOI: https://arxiv.org/abs/2510.19691

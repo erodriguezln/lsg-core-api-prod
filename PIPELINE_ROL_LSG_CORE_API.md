@@ -15,7 +15,7 @@
 
 ---
 
-## Paso 0 — Autenticación (TODOS los roles)
+## Paso 0 - Autenticación (TODOS los roles)
 
 ```
 POST /lsg-auth/login
@@ -31,7 +31,7 @@ Verificar perfil:       GET  /lsg-auth/whoami
 
 ---
 
-## Rol: ADMIN — Pipeline completo
+## Rol: ADMIN - Pipeline completo
 
 ### A. Gestión de usuarios
 
@@ -138,7 +138,7 @@ Verificar perfil:       GET  /lsg-auth/whoami
 
 ---
 
-## Rol: RESEARCHER — Pipeline de investigación
+## Rol: RESEARCHER - Pipeline de investigación
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -185,7 +185,7 @@ Verificar perfil:       GET  /lsg-auth/whoami
 
 ---
 
-## Rol: DEVELOPER — Pipeline de integración de mod
+## Rol: DEVELOPER - Pipeline de integración de mod
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -237,28 +237,28 @@ Verificar perfil:       GET  /lsg-auth/whoami
 │     → calcula duration_seconds automáticamente                  │
 │     → registra en interaction_logs                              │
 │                                                                 │
-│ ¿Se puede automatizar? SÍ — el mod puede llamar estos           │
+│ ¿Se puede automatizar? SÍ - el mod puede llamar estos           │
 │ endpoints al detectar el evento de inicio/cierre del juego.     │
 │ No requiere acción del usuario.                                 │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
-│ FASE 5: PUNTOS — CARGAR Y CANJEAR                               │
+│ FASE 5: PUNTOS - CARGAR Y CANJEAR                               │
 │                                                                 │
-│ PLAN A — vía sensor (automático con sensor configurado):        │
+│ PLAN A - vía sensor (automático con sensor configurado):        │
 │   POST /sensors/ingest/webhook                                  │
 │     { player_id, sensor_endpoint_id, players_sensor_endpoint_id │
 │       raw_payload: { "steps": 8500, "date": "2026-05-07" },     │
 │       parsed_value: 8500.0 }                                    │
 │   → el sensor queda registrado, puntos se asignan via pipeline  │
 │                                                                 │
-│ PLAN B — carga directa de puntos (sin sensor):                  │
+│ PLAN B - carga directa de puntos (sin sensor):                  │
 │   POST /players/{id}/points/adjust   (requiere researcher/admin)│
 │     { point_dimension_id, direction: "CREDIT", amount, reason } │
 │   → fuente queda como "ADJUST", registrado en interaction_logs  │
 │   → usar cuando el developer procesa los datos externamente     │
 │                                                                 │
-│ PLAN C — offline (juego sin conexión):                          │
+│ PLAN C - offline (juego sin conexión):                          │
 │   POST /offline/sync                                            │
 │     { player_id, game_id, events: [                             │
 │         { client_ref: "uuid", client_generated_at: "...",       │
@@ -296,7 +296,7 @@ Verificar perfil:       GET  /lsg-auth/whoami
 
 ---
 
-## Rol: TEACHER — Pipeline de supervisión
+## Rol: TEACHER - Pipeline de supervisión
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -321,7 +321,7 @@ Verificar perfil:       GET  /lsg-auth/whoami
 
 ---
 
-## Rol: PLAYER — Pipeline del participante
+## Rol: PLAYER - Pipeline del participante
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -384,7 +384,7 @@ IC² calculado → reglas R1-R6 → mecánicas activadas
 
 El `sensor_ingest_event` es un **registro de dato crudo**. La conversión a dimensiones de puntos y el cálculo IC² son pasos separados que hoy se hacen manualmente (el researcher llama `POST /ic2/compute` con los valores ya procesados).
 
-### Plan B — Carga directa de puntos sin sensor
+### Plan B - Carga directa de puntos sin sensor
 
 Si el developer ya procesa los datos en su mod y sólo quiere registrar los puntos resultantes directamente:
 

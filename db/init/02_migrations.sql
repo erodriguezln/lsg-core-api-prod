@@ -153,7 +153,7 @@ INSERT IGNORE INTO `ic2_goalpost_version`
 VALUES (
   'v1.0-SCCC2026',
   '2026-05-06',
-  'Goalposts baseline IC2_LSG — Macías-Cáceres et al., SCCC 2026',
+  'Goalposts baseline IC2_LSG - Macías-Cáceres et al., SCCC 2026',
   JSON_OBJECT(
     'Icf', JSON_OBJECT(
       'MVPA',  JSON_OBJECT('min',0,'max',300,'strategy','F2','direction','+'),
@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS `offline_points_queue` (
   `amount`                INT          NOT NULL,
   `source_type`           VARCHAR(32)  NOT NULL DEFAULT 'OFFLINE_GAME',
   `client_ref`            VARCHAR(128) NOT NULL
-    COMMENT 'UUID generado por cliente — garantiza idempotencia',
+    COMMENT 'UUID generado por cliente - garantiza idempotencia',
   `client_generated_at`   TIMESTAMP    NOT NULL,
   `payload`               JSON         NULL,
   `status`                ENUM('PENDING','SYNCED','REJECTED','DUPLICATE') NOT NULL DEFAULT 'PENDING',

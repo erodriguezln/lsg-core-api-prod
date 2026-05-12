@@ -47,9 +47,8 @@ CORE_DOCS_DESCRIPTION = """
    Ventana máxima: 30 días. Idempotencia por `client_ref`.
 
 Fuente:
-- González-Ibáñez, R., Macías-Cáceres, J., Villalta-Paucar, M. (2025).
-  LifeSync-Games: Toward a Video Game Paradigm for Promoting Responsible
-  Gaming and Human Development. arXiv:2510.19691 [cs.HC].
+- R. González-Ibáñez, J. I. Macías-Cáceres and M. V. Paucar, "LifeSync-Games: A Technical Note on a Novel Framework for Video Game Development," 2025 44th International Conference of the Chilean Computer Science Society (SCCC), Valparaiso, Chile, 2025, pp. 1-4, doi: 10.1109/SCCC67219.2025.11420722.
+- González-Ibáñez R., Macías-Cáceres J., Villalta-Paucar M. (2025). *LifeSync-Games: Toward a Video Game Paradigm for Promoting Responsible Gaming and Human Development*. arXiv:2510.19691 [cs.HC]. DOI: https://arxiv.org/abs/2510.19691
 
 """
 

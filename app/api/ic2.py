@@ -30,14 +30,14 @@ class RawSignals(BaseModel):
     Señales crudas de entrada. Todas opcionales: si falta una señal completa,
     la subdimensión se marca NA y no participa en la agregación.
     """
-    MVPA_min_week:         Optional[float] = None  # Icf  — F2
-    steps_day:             Optional[float] = None  # Icf  — F2
-    resting_hr_bpm:        Optional[float] = None  # Isfg — F3, dirección '-'
-    sleep_quality_score:   Optional[float] = None  # Isfg — F4
-    memory_accuracy_pct:   Optional[float] = None  # Ipma — F1
-    recall_speed_ms:       Optional[float] = None  # Ipma — F1, dirección '-'
-    decision_accuracy_pct: Optional[float] = None  # Itd  — F1
-    reaction_time_ms:      Optional[float] = None  # Itd  — F1, dirección '-'
+    MVPA_min_week:         Optional[float] = None  # Icf  - F2
+    steps_day:             Optional[float] = None  # Icf  - F2
+    resting_hr_bpm:        Optional[float] = None  # Isfg - F3, dirección '-'
+    sleep_quality_score:   Optional[float] = None  # Isfg - F4
+    memory_accuracy_pct:   Optional[float] = None  # Ipma - F1
+    recall_speed_ms:       Optional[float] = None  # Ipma - F1, dirección '-'
+    decision_accuracy_pct: Optional[float] = None  # Itd  - F1
+    reaction_time_ms:      Optional[float] = None  # Itd  - F1, dirección '-'
 
 
 class IC2ComputeRequest(BaseModel):
@@ -375,7 +375,7 @@ def get_goalposts(
         raise HTTPException(status_code=404, detail=f"Versión '{version_tag}' no encontrada.")
 
     result = dict(row)
-    # goalposts almacenado como JSON en MySQL — puede venir como string
+    # goalposts almacenado como JSON en MySQL - puede venir como string
     if isinstance(result.get("goalposts"), str):
         try:
             result["goalposts"] = json.loads(result["goalposts"])
