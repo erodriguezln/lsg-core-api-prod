@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+import json
 
 from app.db import get_db
 
@@ -26,6 +27,22 @@ class PointsAdjustRequest(BaseModel):
     reason: Optional[str] = None
     videogame_id: Optional[int] = None
 
+# Functions
+
+def _parse_json(value):
+    """
+    Convierte a dict/lista si es JSON string, o devuelve None si es null/None.
+    Si falla el parsing, devuelve el valor original (raw).
+    """
+    if value is None:
+        return None
+    if isinstance(value, (dict, list)):
+        return value
+    # Si es string, intenta parsear
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return value
 
 # Attributes & Subattributes
 
@@ -230,7 +247,13 @@ def get_points_ledger(
     base += " ORDER BY occurred_at DESC LIMIT 500"  # cap defensivo
 
     rows = db.execute(text(base), params).mappings().all()
-    return list(rows)
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["payload"] = _parse_json(d.get("payload"))
+        result.append(d)
+    return result
 
 
 @router.post("/players/{player_id}/points/adjust", tags=["points"], dependencies=[Depends(require_roles(["admin", "researcher"]))])
