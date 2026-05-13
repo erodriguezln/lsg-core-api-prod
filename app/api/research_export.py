@@ -420,8 +420,8 @@ def export_ic2_results(
         SELECT
           r.id_ic2_result,
           r.id_players,
-          p.name          AS player_name,
-          p.email         AS player_email,
+          p.name AS player_name,
+          p.email AS player_email,
           v.version_tag,
           r.window_start,
           r.window_end,
@@ -432,8 +432,8 @@ def export_ic2_results(
           r.experiment_tag,
           r.computed_at
         FROM ic2_result r
-        JOIN players              p ON p.id_players = r.id_players
-        JOIN ic2_goalpost_version v ON v.id_version  = r.id_version
+        JOIN players p ON p.id_players = r.id_players
+        JOIN ic2_goalpost_version v ON v.id_version = r.id_version
     """
     conditions, params = [], {}
 

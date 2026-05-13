@@ -136,6 +136,7 @@ def list_videogames(
               id_videogame,
               name,
               genre,
+              description,
               engine,
               developer,
               publisher,
@@ -167,6 +168,7 @@ def get_videogame(
               id_videogame,
               name,
               genre,
+              description,
               engine,
               developer,
               publisher,
@@ -190,6 +192,7 @@ class VideogameCreateRequest(BaseModel):
     id_videogame: Optional[int] = None
     name: str
     genre: Optional[str] = None
+    description: Optional[str] = None
     engine: Optional[str] = None
     developer: Optional[str] = None
     publisher: Optional[str] = None
@@ -237,12 +240,13 @@ def create_videogame(
         "id_videogame": payload.id_videogame,
         "name": payload.name,
         "genre": payload.genre,
+        "description": payload.description,
         "engine": payload.engine,
         "developer": payload.developer,
         "publisher": payload.publisher,
         "launch": payload.launch,
         "version": payload.version,
-        "type": payload.type,
+        "type": payload.type
     }
 
     try:
@@ -251,9 +255,9 @@ def create_videogame(
                 text(
                     """
                     INSERT INTO videogame (
-                      name, genre, engine, developer, publisher, launch, version, type
+                      name, genre, description, engine, developer, publisher, launch, version, type
                     ) VALUES (
-                      :name, :genre, :engine, :developer, :publisher, :launch, :version, :type
+                      :name, :genre, :description, :engine, :developer, :publisher, :launch, :version, :type
                     )
                     """
                 ),
@@ -265,9 +269,9 @@ def create_videogame(
                 text(
                     """
                     INSERT INTO videogame (
-                      id_videogame, name, genre, engine, developer, publisher, launch, version, type
+                      id_videogame, name, genre, description, engine, developer, publisher, launch, version, type
                     ) VALUES (
-                      :id_videogame, :name, :genre, :engine, :developer, :publisher, :launch, :version, :type
+                      :id_videogame, :name, :genre, :description, :engine, :developer, :publisher, :launch, :version, :type
                     )
                     """
                 ),
@@ -285,7 +289,7 @@ def create_videogame(
         text(
             """
             SELECT
-              id_videogame, name, genre, engine, developer, publisher, launch, version, type
+              id_videogame, name, genre, description, engine, developer, publisher, launch, version, type
             FROM videogame
             WHERE id_videogame = :id
             """
@@ -312,11 +316,12 @@ def get_videogame_mechanics(
             SELECT
               mmv.id_modifiable_mechanic_videogame,
               mmv.id_videogame,
+              (SELECT name FROM videogame WHERE id_videogame = mmv.id_videogame) AS videogame_name,
               mmv.options,
               mm.id_modifiable_mechanic,
-              mm.name AS mechanic_name,
-              mm.description AS mechanic_description,
-              mm.type AS mechanic_type
+              mm.name AS modifiable_mechanic_name,
+              mm.description AS modifiable_mechanic_description,
+              mm.type AS modifiable_mechanic_type
             FROM modifiable_mechanic_videogames mmv
             JOIN modifiable_mechanic mm
               ON mmv.id_modifiable_mechanic = mm.id_modifiable_mechanic

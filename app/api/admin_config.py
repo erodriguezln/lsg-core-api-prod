@@ -17,12 +17,7 @@ from app.security import (
 
 router = APIRouter(prefix="/admin", tags=["admin-config"])
 
-
-# =========================
-# Pydantic models
-# =========================
-
-# --- Attributes ---
+# Attributes
 
 class AttributeBase(BaseModel):
     name: str
@@ -40,7 +35,7 @@ class AttributeUpdate(BaseModel):
     data_type: Optional[str] = None
 
 
-# --- Subattributes ---
+# Subattributes
 
 class SubattributeBase(BaseModel):
     attribute_id: int = Field(..., description="FK a attributes.id_attributes")
@@ -58,7 +53,7 @@ class SubattributeUpdate(BaseModel):
     description: Optional[str] = None
 
 
-# --- Point Dimension ---
+# Point Dimension
 
 class PointDimensionBase(BaseModel):
     id_attributes: Optional[int] = Field(
@@ -108,7 +103,7 @@ class PointDimensionUpdate(BaseModel):
         return values
 
 
-# --- Modifiable Mechanic ---
+# Modifiable Mechanic
 
 class ModifiableMechanicBase(BaseModel):
     name: str
@@ -126,7 +121,7 @@ class ModifiableMechanicUpdate(BaseModel):
     type: Optional[str] = None
 
 
-# --- Modifiable Mechanic Videogames ---
+# Modifiable Mechanic Videogames
 
 class ModifiableMechanicVGBase(BaseModel):
     id_videogame: int
@@ -269,7 +264,6 @@ def admin_update_attribute(
 
     **Roles disponibles:** "admin"
     """
-    # Verificamos existencia
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -322,7 +316,6 @@ def admin_delete_attribute(
 
     **Roles disponibles:** "admin"
     """
-    # Verificamos existencia
     _ensure_exists(
         db,
         "SELECT id_attributes FROM attributes WHERE id_attributes = :id",
@@ -362,12 +355,14 @@ def admin_list_subattributes(
     """
     base = """
         SELECT
-          id_subattributes,
-          attributes_id_attributes AS attribute_id,
-          name,
-          description,
-          created_at,
-          updated_at
+            id_subattributes,
+            name AS subattributes_name,
+            description AS description_subattributes,
+            attributes_id_attributes AS id_attribute,
+            (SELECT name FROM attributes WHERE id_attributes = attributes_id_attributes) AS attributes_name,
+            (SELECT description FROM attributes WHERE id_attributes = attributes_id_attributes) AS attributes_description,
+            created_at,
+            updated_at
         FROM subattributes
     """
     params = {}
@@ -396,14 +391,18 @@ def admin_get_subattribute(
         db,
         """
         SELECT
-          id_subattributes,
-          attributes_id_attributes AS attribute_id,
-          name,
-          description,
-          created_at,
-          updated_at
-        FROM subattributes
-        WHERE id_subattributes = :id
+            sa.id_subattributes,
+            sa.name AS subattributes_name,
+            sa.description AS description_subattributes,
+            sa.attributes_id_attributes AS id_attribute,
+            a.name AS attributes_name,
+            a.description AS attributes_description,
+            sa.created_at,
+            sa.updated_at
+        FROM subattributes sa
+        JOIN attributes a 
+            ON sa.attributes_id_attributes = a.id_attributes
+        WHERE sa.id_subattributes = :id
         """,
         {"id": sub_id},
         "Subattribute not found",
@@ -1020,7 +1019,7 @@ def admin_list_mod_mech_vg(
           mmv.id_videogame,
           vg.name AS videogame_name,
           mmv.id_modifiable_mechanic,
-          mm.name AS mechanic_name,
+          mm.name AS modifiable_mechanic_name,
           mmv.options
         FROM modifiable_mechanic_videogames mmv
         JOIN videogame vg ON vg.id_videogame = mmv.id_videogame
@@ -1061,7 +1060,7 @@ def admin_get_mod_mech_vg(
           mmv.id_videogame,
           vg.name AS videogame_name,
           mmv.id_modifiable_mechanic,
-          mm.name AS mechanic_name,
+          mm.name AS modifiable_mechanic_name,
           mmv.options
         FROM modifiable_mechanic_videogames mmv
         JOIN videogame vg ON vg.id_videogame = mmv.id_videogame
@@ -1092,11 +1091,11 @@ def admin_create_mod_mech_vg(
     """
     import json
 
-def _parse_json(v):
-    if isinstance(v, str):
-        try: return json.loads(v)
-        except: pass
-    return v
+    def _parse_json(v):
+        if isinstance(v, str):
+            try: return json.loads(v)
+            except: pass
+        return v
 
 
     # Validamos FKs

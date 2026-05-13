@@ -17,9 +17,9 @@ router = APIRouter()
 
 # Configuración
 
-OFFLINE_MAX_AGE_DAYS      = 30     # Decisión 2: ventana máxima de aceptación
-OFFLINE_MAX_AMOUNT        = 10_000  # monto máximo por evento (anti-fraude)
-OFFLINE_FUTURE_MARGIN_SEC = 60     # margen de clock skew aceptable
+OFFLINE_MAX_AGE_DAYS      = 30
+OFFLINE_MAX_AMOUNT        = 10_000
+OFFLINE_FUTURE_MARGIN_SEC = 60
 
 # Schemas
 
@@ -310,7 +310,7 @@ def get_offline_queue(
 
     Consulta el estado de los eventos en la cola offline de un jugador.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher"
     """
     elevated = {"admin", "researcher"}
     if not any(r in elevated for r in current.roles):

@@ -82,7 +82,7 @@ def get_player(
 
     Detalle de un jugador.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "student"    
     """
     row = db.execute(
         text(
@@ -172,7 +172,7 @@ def get_player_games(
     
     Usa la vista v_player_game_overview.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "student"    
     """
     rows = db.execute(
         text(
@@ -218,7 +218,7 @@ def get_player_timeline(
     - sensor_ingest
     - redemption
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "student"    
     """
     params_base = {"pid": player_id}
     if from_ts is not None:
@@ -276,20 +276,29 @@ def get_player_timeline(
     # 2) Movimientos de puntos
     sql_points = """
         SELECT
-          id_points_ledger,
-          id_players,
-          id_point_dimension,
-          id_videogame,
-          direction,
-          amount,
-          source_type,
-          source_ref,
-          occurred_at
-        FROM points_ledger
-        WHERE id_players = :pid
+          pl.id_points_ledger,
+          pl.id_players,
+          pla.name AS players_name,
+          pl.id_point_dimension,
+          pod.code AS point_dimension_name,
+          pl.id_videogame,
+          vid.name AS videogame_name,
+          pl.direction,
+          pl.amount,
+          pl.source_type,
+          pl.source_ref,
+          pl.occurred_at
+        FROM points_ledger pl
+        JOIN players pla 
+			ON pl.id_players = pla.id_players
+		JOIN point_dimension pod
+			ON pl.id_point_dimension = pod.id_point_dimension
+		JOIN videogame vid
+			ON pl.id_videogame = vid.id_videogame
+        WHERE pl.id_players = :pid
     """
-    sql_points = _add_time_filter(sql_points, "occurred_at")
-    sql_points += " ORDER BY occurred_at DESC LIMIT :limit"
+    sql_points = _add_time_filter(sql_points, "pl.occurred_at")
+    sql_points += " ORDER BY pl.occurred_at DESC LIMIT :limit"
     points = db.execute(
         text(sql_points),
         {**params_base, "limit": limit},
@@ -307,18 +316,24 @@ def get_player_timeline(
     # 3) Ingestas de sensores
     sql_sensors = """
         SELECT
-          id_sensor_ingest_event,
-          id_players,
-          id_players_sensor_endpoint,
-          id_sensor_endpoint,
-          parsed_value,
-          status,
-          occurred_at
-        FROM sensor_ingest_event
-        WHERE id_players = :pid
+          si.id_sensor_ingest_event,
+          si.id_players,
+          pla.name AS players_name,
+          si.id_players_sensor_endpoint,
+          se.name,
+          se.description,
+          si.parsed_value,
+          si.status,
+          si.occurred_at
+        FROM sensor_ingest_event si
+        JOIN players pla 
+			ON si.id_players = pla.id_players
+        JOIN sensor_endpoint se
+			ON se.id_sensor_endpoint = si.id_players_sensor_endpoint
+        WHERE si.id_players = :pid
     """
-    sql_sensors = _add_time_filter(sql_sensors, "occurred_at")
-    sql_sensors += " ORDER BY occurred_at DESC LIMIT :limit"
+    sql_sensors = _add_time_filter(sql_sensors, "si.occurred_at")
+    sql_sensors += " ORDER BY si.occurred_at DESC LIMIT :limit"
     sensor_events = db.execute(
         text(sql_sensors),
         {**params_base, "limit": limit},
@@ -340,14 +355,23 @@ def get_player_timeline(
           r.id_points_ledger,
           r.redeemed_points,
           pl.id_players,
+          pla.name AS players_name,
           pl.id_videogame,
+          vid.name AS videogame_name,
           pl.id_point_dimension,
+          pod.code AS point_dimension_name,
           pl.occurred_at,
           pl.amount,
           pl.source_ref
         FROM redemption_event r
         JOIN points_ledger pl
           ON pl.id_points_ledger = r.id_points_ledger
+        JOIN players pla 
+			ON pl.id_players = pla.id_players
+        JOIN videogame vid
+			ON pl.id_videogame = vid.id_videogame
+        JOIN point_dimension pod
+			ON pl.id_point_dimension = pod.id_point_dimension
         WHERE pl.id_players = :pid
     """
     sql_redemptions = _add_time_filter(sql_redemptions, "pl.occurred_at")

@@ -64,7 +64,7 @@ def admin_points_consistency_check(
     """
     issues: Dict[str, Any] = {}
 
-    # 1) Diferencias entre snapshot y ledger
+    # Diferencias entre snapshot y ledger
     try:
         c1, s1 = _count_and_sample(
             db,
@@ -99,7 +99,7 @@ def admin_points_consistency_check(
             "detail": str(e),
         }
 
-    # 2) Movimientos inválidos en ledger (amount <= 0)
+    # Movimientos inválidos en ledger (amount <= 0)
     try:
         c2, s2 = _count_and_sample(
             db,
@@ -136,7 +136,7 @@ def admin_points_consistency_check(
             "detail": str(e),
         }
 
-    # 3) Saldos negativos por dimensión en v_points_balance
+    # Saldos negativos por dimensión en v_points_balance
     try:
         c3, s3 = _count_and_sample(
             db,
@@ -168,7 +168,7 @@ def admin_points_consistency_check(
             "detail": str(e),
         }
 
-    # 4a) Redemption_event sin points_ledger asociado
+    # Redemption_event sin points_ledger asociado
     try:
         c4a, s4a = _count_and_sample(
             db,
@@ -204,7 +204,7 @@ def admin_points_consistency_check(
             "detail": str(e),
         }
 
-    # 4b) Redemption_event con ledger de tipo incorrecto
+    # Redemption_event con ledger de tipo incorrecto
     try:
         c4b, s4b = _count_and_sample(
             db,
