@@ -37,7 +37,7 @@ def _count_and_sample(
     return int(total), [dict(r) for r in sample_rows]
 
 
-@router.get("/consistency-check", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.get("/consistency-check", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def admin_points_consistency_check(
     limit_issues: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_db),
@@ -60,7 +60,7 @@ def admin_points_consistency_check(
        - redemption_event vinculado a points_ledger existente
        - points_ledger.direction = 'DEBIT' y source_type = 'REDEMPTION'
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     issues: Dict[str, Any] = {}
 

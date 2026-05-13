@@ -149,7 +149,7 @@ def compute_ic2(
     **Acceso:**
     - `player`: solo su propio IC².
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     elevated = {"admin", "researcher", "teacher"}
     if not any(r in elevated for r in current.roles):
@@ -305,7 +305,7 @@ def get_ic2_history(
 
     Historial de resultados IC² de un jugador, ordenado cronológicamente inverso.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     elevated = {"admin", "researcher", "teacher"}
     if not any(r in elevated for r in current.roles):
@@ -363,7 +363,7 @@ def get_goalposts(
 
     Retorna los goalposts y estrategias de normalización de una versión.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     row = db.execute(
         text("""SELECT version_tag, published_at, description, goalposts, is_active

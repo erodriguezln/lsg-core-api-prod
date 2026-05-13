@@ -127,7 +127,7 @@ def list_videogames(
     """
     # GET /videogames
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     rows = db.execute(
         text(
@@ -159,7 +159,7 @@ def get_videogame(
     """
     # GET /videogames/{game_id}
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     row = db.execute(
         text(
@@ -201,7 +201,7 @@ class VideogameCreateRequest(BaseModel):
     type: Optional[str] = None
 
 
-@router.post("", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.post("", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def create_videogame(
     payload: VideogameCreateRequest,
     db: Session = Depends(get_db),
@@ -211,7 +211,7 @@ def create_videogame(
 
     Crea un nuevo videojuego.
 
-    **Roles disponibles:** "admin", "researcher"    
+    **Roles disponibles:** "admin", "researcher", "developer"    
     """
     exists = db.execute(
         text(
@@ -308,7 +308,7 @@ def get_videogame_mechanics(
     """
     # GET /videogames/{game_id}/mechanics
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     rows = db.execute(
         text(
@@ -357,7 +357,7 @@ def preview_redeem_mechanic(
     """
     # POST /videogames/{game_id}/players/{player_id}/redeem/preview
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     _assert_mmv_exists_for_game(db, game_id, payload.modifiable_mechanic_videogame_id)
 
@@ -393,7 +393,7 @@ def redeem_mechanic(
     """
     # POST /videogames/{game_id}/players/{player_id}/redeem
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     from uuid import uuid4
     import json
@@ -573,7 +573,7 @@ def start_session(
     """
     # POST /videogames/{game_id}/players/{player_id}/sessions
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     import json
 
@@ -626,7 +626,7 @@ def end_session(
     """
     # PATCH /videogames/{game_id}/players/{player_id}/sessions/{session_id}/end
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     ended_at = payload.ended_at or datetime.utcnow()
 
@@ -683,7 +683,7 @@ def end_session(
 
 # Mechanics
 
-@router.post("/mechanics/catalog", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.post("/mechanics/catalog", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def create_modifiable_mechanic(
     payload: ModifiableMechanicCreateRequest,
     db: Session = Depends(get_db),
@@ -691,7 +691,7 @@ def create_modifiable_mechanic(
     """
     # POST /videogames/mechanics/catalog
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     exists = db.execute(
         text("""
@@ -744,7 +744,7 @@ def create_modifiable_mechanic(
     return dict(row)
 
 
-@router.post("/{game_id}/mechanics", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.post("/{game_id}/mechanics", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def attach_mechanic_to_videogame(
     game_id: int,
     payload: ModifiableMechanicVideogameCreateRequest,
@@ -753,7 +753,7 @@ def attach_mechanic_to_videogame(
     """
     # POST /videogames/{game_id}/mechanics
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     import json
 
@@ -829,7 +829,7 @@ def connect_player_videogame(
     """
     # POST /videogames/{game_id}/players/{player_id}/connect
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     import json
 

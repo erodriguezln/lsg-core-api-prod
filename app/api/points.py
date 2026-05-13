@@ -53,7 +53,7 @@ def list_attributes(
     """
     # GET /attributes
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
         text(
@@ -75,7 +75,7 @@ def list_subattributes(
     """
     # GET /attributes/{attribute_id}/subattributes
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
         text(
@@ -105,7 +105,7 @@ def get_attributes_map(
 
     Usa la función sp_get_att_subattributes_name() que retorna JSON.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     row = db.execute(
         text("SELECT sp_get_att_subattributes_name() AS data")
@@ -137,7 +137,7 @@ def get_player_points_balance(
 
     Lee desde v_points_balance.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
         text(
@@ -166,7 +166,7 @@ def get_player_attribute_points(
 
     Usa la vista v_player_attribute_balance.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
         text(
@@ -204,7 +204,7 @@ def get_points_ledger(
 
     Consulta filtrable del ledger de puntos.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     base = """
         SELECT
@@ -256,7 +256,7 @@ def get_points_ledger(
     return result
 
 
-@router.post("/players/{player_id}/points/adjust", tags=["points"], dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.post("/players/{player_id}/points/adjust", tags=["points"], dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def adjust_player_points(
     player_id: int,
     payload: PointsAdjustRequest,
@@ -267,7 +267,7 @@ def adjust_player_points(
 
     Inserta un ajuste manual en points_ledger (source_type='ADJUST').
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     from uuid import uuid4
     import json

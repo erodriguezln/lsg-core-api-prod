@@ -99,7 +99,7 @@ def _parse_json(value):
 
 # Export: Points ledger
 
-@router.get("/points", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.get("/points", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def export_points(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (inicio ventana tiempo, opcional)"
@@ -121,7 +121,7 @@ def export_points(
     Exporta movimientos de puntos (points_ledger) para análisis de investigación.
     Incluye seudonimización de identidad del jugador.
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     base = """
         SELECT
@@ -196,7 +196,7 @@ def export_points(
 
 # Export: Game sessions
 
-@router.get("/sessions", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.get("/sessions", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def export_sessions(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (inicio ventana tiempo, opcional)"
@@ -216,7 +216,7 @@ def export_sessions(
 
     Exporta sesiones de juego (lsg_game_session + player_videogame + players).
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     base = """
         SELECT
@@ -282,7 +282,7 @@ def export_sessions(
 
 # Export: Sensor ingest
 
-@router.get("/sensors", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.get("/sensors", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def export_sensors(
     from_ts: Optional[Annotated[datetime, BeforeValidator(decode_ts)]] = Query(
         None, description="YYYY-MM-DD HH:MM:SS (inicio ventana tiempo, opcional)"
@@ -303,7 +303,7 @@ def export_sensors(
     Exporta eventos de sensor (sensor_ingest_event) con contexto.
     Nota ética: incluye raw_payload tal como existe en la tabla.
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     base = """
         SELECT
@@ -369,7 +369,7 @@ def export_sensors(
 
 # Export: IC² results
 
-@router.get("/ic2", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.get("/ic2", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def export_ic2_results(
     from_date: Optional[str] = Query(
         None, description="YYYY-MM-DD (inicio ventana)"
@@ -406,7 +406,7 @@ def export_ic2_results(
     señales crudas (raw_inputs), admisibilidad por subdimensión, experiment_tag
     y ventana temporal. Soporta seudonimización de identidad del jugador.
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
 
     **cURL (CSV para análisis en R/Python):**
     ```bash

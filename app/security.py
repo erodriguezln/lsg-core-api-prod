@@ -225,6 +225,6 @@ def guard_player_access(
     )
 
 require_admin                          = require_roles(["admin"])
-require_admin_or_researcher            = require_roles(["admin", "researcher"])
-require_admin_or_researcher_or_teacher = require_roles(["admin", "researcher", "teacher"])
+require_admin_or_researcher            = require_roles(["admin", "researcher", "developer"])
+require_admin_or_researcher_or_teacher = require_roles(["admin", "researcher", "teacher", "developer"])
 require_player_or_higher               = require_roles(ROLE_ALL)

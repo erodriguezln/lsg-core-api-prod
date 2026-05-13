@@ -18,7 +18,7 @@ from app.security import (
 router = APIRouter()
 
 
-@router.get("", dependencies=[Depends(require_roles(["admin", "researcher", "teacher"]))])
+@router.get("", dependencies=[Depends(require_roles(["admin", "researcher", "teacher", "developer"]))])
 def list_players(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
@@ -29,7 +29,7 @@ def list_players(
 
     Lista jugadores con paginación.
 
-    **Roles disponibles:** "admin", "researcher", "teacher"  
+    **Roles disponibles:** "admin", "researcher", "teacher", "developer"  
     """
     offset = (page - 1) * page_size
 
@@ -82,7 +82,7 @@ def get_player(
 
     Detalle de un jugador.
 
-    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "player"    
     """
     row = db.execute(
         text(
@@ -135,7 +135,7 @@ def delete_player(
     return {"status": "deleted", "id_players": player_id}
 
 
-@router.post("/{player_id}/attributes/init", dependencies=[Depends(require_roles(["admin", "teacher", "researcher"]))])
+@router.post("/{player_id}/attributes/init", dependencies=[Depends(require_roles(["admin", "teacher", "researcher", "developer"]))])
 def init_player_attributes(
     player_id: int,
     db: Session = Depends(get_db),
@@ -145,7 +145,7 @@ def init_player_attributes(
 
     Inicializa players_attributes para este jugador.
 
-    **Roles disponibles:** "admin", "researcher", "teacher"  
+    **Roles disponibles:** "admin", "researcher", "teacher", "developer"  
     """
     try:
         db.execute(
@@ -172,7 +172,7 @@ def get_player_games(
     
     Usa la vista v_player_game_overview.
 
-    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "player"    
     """
     rows = db.execute(
         text(
@@ -218,7 +218,7 @@ def get_player_timeline(
     - sensor_ingest
     - redemption
 
-    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "developer", "researcher", "teacher", "player"    
     """
     params_base = {"pid": player_id}
     if from_ts is not None:

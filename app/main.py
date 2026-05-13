@@ -39,6 +39,7 @@ CORE_DOCS_DESCRIPTION = """
    | `teacher` | Lectura de todos los jugadores y analíticas |
    | `researcher` | Todo lo de teacher + ajuste de puntos, exportación e IC² ajeno |
    | `admin` | Acceso completo, incluyendo configuración del sistema |
+   | `developer` | Acceso completo, incluyendo configuración del sistema y endpoints de mantenimiento |
 
 4. **IC² LSG** (`/ic2`): calcula el Índice Compuesto Físico-Mental a partir de
    estrategias de normalización y reglas de mecánica.
@@ -54,7 +55,7 @@ Fuente:
 
 app = FastAPI(
     title="LifeSync-Games Core API",
-    version="1.2.0",
+    version="1.2.1",
     root_path=ROOT_PATH,
     description=CORE_DOCS_DESCRIPTION,
 )

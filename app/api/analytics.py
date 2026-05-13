@@ -15,7 +15,7 @@ from app.security import (
 router = APIRouter()
 
 
-@router.get("/points-balance", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.get("/points-balance", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def get_points_balance(
     player_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
@@ -25,7 +25,7 @@ def get_points_balance(
 
     Lee desde v_points_balance.
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     base_query = "SELECT * FROM v_points_balance"
     params = {}
@@ -39,7 +39,7 @@ def get_points_balance(
     return {"items": rows}
 
 
-@router.get("/player-game-overview", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.get("/player-game-overview", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def get_player_game_overview(
     player_id: Optional[int] = Query(None),
     videogame_id: Optional[int] = Query(None),
@@ -50,7 +50,7 @@ def get_player_game_overview(
 
     Usa v_player_game_overview.
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     base = """
         SELECT
@@ -80,7 +80,7 @@ def get_player_game_overview(
     return list(rows)
 
 
-@router.get("/player-attribute-balance", dependencies=[Depends(require_roles(["admin", "researcher"]))])
+@router.get("/player-attribute-balance", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def get_player_attribute_balance(
     player_id: Optional[int] = Query(None),
     attribute_id: Optional[int] = Query(None),
@@ -91,7 +91,7 @@ def get_player_attribute_balance(
     
     Usa v_player_attribute_balance.
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     base = """
         SELECT
@@ -122,7 +122,7 @@ def get_player_attribute_balance(
     return list(rows)
 
 
-@router.get("/games/time-to-first-redeem", dependencies=[Depends(require_roles(["admin", "researcher"]))] )  
+@router.get("/games/time-to-first-redeem", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))] )  
 def get_time_to_first_redeem(
     db: Session = Depends(get_db),
 ):
@@ -133,7 +133,7 @@ def get_time_to_first_redeem(
     Solo incluye jugadores donde el primer canje ocurrió DESPUÉS de su primera sesión.
     Campo `n_players`: cantidad de jugadores que contribuyen al promedio por juego.
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     query = """
         WITH first_session AS (
@@ -175,7 +175,7 @@ def get_time_to_first_redeem(
 
 # Data quality & sensores
 
-@router.get("/sensors/quality", dependencies=[Depends(require_roles(["admin", "researcher"]))] )
+@router.get("/sensors/quality", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))] )
 def get_sensors_quality(
     player_id: Optional[int] = Query(
         None, description="Filtra por id_players (opcional)"
@@ -204,7 +204,7 @@ def get_sensors_quality(
     - avg_events_per_day
     - min/avg/max parsed_value
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     base = """
         SELECT
@@ -277,7 +277,7 @@ def get_sensors_quality(
     return result
 
 
-@router.get("/sensors/ingest-vs-points", dependencies=[Depends(require_roles(["admin", "researcher"]))] )
+@router.get("/sensors/ingest-vs-points", dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))] )
 def get_sensors_ingest_vs_points(
     player_id: Optional[int] = Query(
         None, description="Filtra por id_players (opcional)"
@@ -304,7 +304,7 @@ def get_sensors_ingest_vs_points(
     - conversion_rate: points_events / ingest_events
     - avg_points_per_event: total_points / points_events
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     base = """
         SELECT
@@ -386,7 +386,7 @@ def get_sensors_ingest_vs_points(
 
 @router.get(
     "/ic2/summary",
-    dependencies=[Depends(require_roles(["admin", "researcher"]))],
+    dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))],
     summary="Resumen estadístico de IC² por condición y período",
 )
 def get_ic2_summary(
@@ -413,7 +413,7 @@ def get_ic2_summary(
       -H 'Authorization: Bearer <TOKEN>'
     ```
 
-    **Roles disponibles:** "admin", "researcher"    
+    **Roles disponibles:** "admin", "researcher", "developer"    
     """
     base = """
         SELECT

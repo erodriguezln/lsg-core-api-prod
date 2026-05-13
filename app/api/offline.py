@@ -310,9 +310,9 @@ def get_offline_queue(
 
     Consulta el estado de los eventos en la cola offline de un jugador.
 
-    **Roles disponibles:** "admin", "researcher"
+    **Roles disponibles:** "admin", "researcher", "developer", "teacher"
     """
-    elevated = {"admin", "researcher"}
+    elevated = {"admin", "researcher", "developer", "teacher"}
     if not any(r in elevated for r in current.roles):
         if current.player_id != player_id:
             raise HTTPException(status_code=403,

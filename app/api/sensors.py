@@ -98,7 +98,7 @@ def list_sensors(db: Session = Depends(get_db)):
 
     Ejemplos de sensores: Google Fit, Apple Health, Fitbit, Garmin, wearable propio.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
         text("""
@@ -116,7 +116,7 @@ def list_sensors(db: Session = Depends(get_db)):
 @router.post(
     "",
     status_code=201,
-    dependencies=[Depends(require_roles(["admin", "researcher"]))],
+    dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))],
     summary="Crear nuevo sensor",
 )
 def create_sensor(
@@ -131,7 +131,7 @@ def create_sensor(
     Después de crear el sensor, usa `POST /sensors/{id}/endpoints`
     para agregar sus endpoints de ingestión.
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     try:
         result = db.execute(
@@ -173,7 +173,7 @@ def list_sensor_endpoints(
     El `id_sensor_endpoint` obtenido aquí es el que se usa en
     `POST /sensors/ingest/webhook` como parámetro `sensor_endpoint_id`.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
         text("""
@@ -195,7 +195,7 @@ def list_sensor_endpoints(
 @router.post(
     "/{sensor_id}/endpoints",
     status_code=201,
-    dependencies=[Depends(require_roles(["admin", "researcher"]))],
+    dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))],
     summary="Agregar endpoint a un sensor",
 )
 def create_sensor_endpoint(
@@ -212,7 +212,7 @@ def create_sensor_endpoint(
     - `POST /sensors/players/{player_id}/link-endpoint`
     - `POST /sensors/ingest/webhook`
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     import json
     try:
@@ -271,7 +271,7 @@ def get_player_sensors(
     - `id_players_sensor_endpoint`: ID del vínculo jugador↔endpoint (para ingest).
     - `activated`: si el endpoint está activo para ingesta automática.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
         text("""
@@ -310,7 +310,7 @@ def get_player_sensors(
 @router.post(
     "/players/{player_id}/link",
     status_code=201,
-    dependencies=[Depends(require_roles(["admin", "researcher"]))],
+    dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))],
     summary="Vincular sensor a un jugador",
 )
 def link_sensor_to_player(
@@ -330,7 +330,7 @@ def link_sensor_to_player(
     4. `POST /sensors/players/{player_id}/link-endpoint` → activar endpoint.
     5. Ahora se puede usar `POST /sensors/ingest/webhook` con los IDs obtenidos.
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     import json
     try:
@@ -375,7 +375,7 @@ def link_sensor_to_player(
 @router.post(
     "/players/{player_id}/link-endpoint",
     status_code=201,
-    dependencies=[Depends(require_roles(["admin", "researcher"]))],
+    dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))],
     summary="Activar endpoint de sensor para un jugador",
 )
 def link_endpoint_to_player(
@@ -393,7 +393,7 @@ def link_endpoint_to_player(
     **Prerequisito:** el jugador ya debe estar vinculado al sensor padre
     via `POST /sensors/players/{player_id}/link`.
 
-    **Roles disponibles:** "admin", "researcher"  
+    **Roles disponibles:** "admin", "researcher", "developer"  
     """
     try:
         result = db.execute(
@@ -459,12 +459,12 @@ def ingest_sensor_event(
     Si `players_sensor_endpoint_id` es null, el evento se registra
     sin vínculo a un endpoint configurado (ingesta manual/directa).
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     import json
 
     # SECURITY: player solo puede ingestar sus propios datos
-    elevated = {"admin", "researcher", "teacher"}
+    elevated = {"admin", "researcher", "teacher", "developer"}
     if not any(r in elevated for r in current.roles):
         if current.player_id is None or current.player_id != payload.player_id:
             raise HTTPException(
@@ -556,7 +556,7 @@ def list_player_ingest_events(
     Devuelve los últimos eventos de sensor ingresados para un jugador,
     ordenados por fecha de ocurrencia descendente.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "student"    
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
         text("""

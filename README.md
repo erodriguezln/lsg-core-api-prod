@@ -250,6 +250,10 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 ## Changelog
 
+### v1.2.2.1 (2026-05-13)
+
+- Roles expandidos a "player" y "developer" para que puedan usar la API.
+
 ### v1.2.2 (2026-05-13)
 
 **Bugfixes críticos:**
