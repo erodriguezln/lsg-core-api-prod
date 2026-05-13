@@ -11,6 +11,7 @@ from fastapi.responses import Response
 from pydantic import BeforeValidator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+import json
 
 from app.db import get_db
 from app.security import (
@@ -77,6 +78,23 @@ def _build_csv_response(rows: List[Dict[str, Any]], filename: str) -> Response:
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+# Functions
+
+def _parse_json(value):
+    """
+    Convierte a dict/lista si es JSON string, o devuelve None si es null/None.
+    Si falla el parsing, devuelve el valor original (raw).
+    """
+    if value is None:
+        return None
+    if isinstance(value, (dict, list)):
+        return value
+    # Si es string, intenta parsear
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return value
 
 
 # Export: Points ledger
@@ -162,7 +180,13 @@ def export_points(
         params["limit"] = limit
 
     rows = db.execute(text(base), params).mappings().all()
-    data = _apply_pseudonymization([dict(r) for r in rows], include_raw_ids)
+
+    processed = []
+    for r in rows:
+        r = dict(r)
+        r["payload"] = _parse_json(r.get("payload"))
+        processed.append(r)
+    data = _apply_pseudonymization(processed, include_raw_ids)
 
     if format == "csv":
         return _build_csv_response(data, "points_export.csv")
@@ -242,7 +266,13 @@ def export_sessions(
         params["limit"] = limit
 
     rows = db.execute(text(base), params).mappings().all()
-    data = _apply_pseudonymization([dict(r) for r in rows], include_raw_ids)
+
+    processed = []
+    for r in rows:
+        r = dict(r)
+        r["session_metrics"] = _parse_json(r.get("session_metrics"))
+        processed.append(r)
+    data = _apply_pseudonymization(processed, include_raw_ids)
 
     if format == "csv":
         return _build_csv_response(data, "sessions_export.csv")
@@ -323,7 +353,13 @@ def export_sensors(
         params["limit"] = limit
 
     rows = db.execute(text(base), params).mappings().all()
-    data = _apply_pseudonymization([dict(r) for r in rows], include_raw_ids)
+
+    processed = []
+    for r in rows:
+        r = dict(r)
+        r["raw_payload"] = _parse_json(r.get("raw_payload"))
+        processed.append(r)
+    data = _apply_pseudonymization(processed, include_raw_ids)
 
     if format == "csv":
         return _build_csv_response(data, "sensors_export.csv")
