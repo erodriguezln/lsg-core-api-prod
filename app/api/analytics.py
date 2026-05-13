@@ -128,9 +128,10 @@ def get_time_to_first_redeem(
 ):
     """
     # GET /analytics/games/time-to-first-redeem
-    
-    Versión simple: tiempo promedio (en minutos) desde primera sesión
-    hasta primer canje, por juego.
+
+    Tiempo promedio (en minutos) desde primera sesión hasta primer canje, por juego.
+    Solo incluye jugadores donde el primer canje ocurrió DESPUÉS de su primera sesión.
+    Campo `n_players`: cantidad de jugadores que contribuyen al promedio por juego.
 
     **Roles disponibles:** "admin", "researcher"
     """
@@ -157,13 +158,16 @@ def get_time_to_first_redeem(
         )
         SELECT
           f.id_videogame,
-          AVG(TIMESTAMPDIFF(MINUTE, f.first_started, fr.first_redeem))
-            AS avg_minutes_to_redeem
+          ROUND(AVG(TIMESTAMPDIFF(MINUTE, f.first_started, fr.first_redeem)), 1)
+            AS avg_minutes_to_redeem,
+          COUNT(*) AS n_players
         FROM first_session f
         JOIN first_redeem fr
-          ON fr.id_players = f.id_players
-         AND fr.id_videogame = f.id_videogame
+          ON fr.id_players   = f.id_players
+         AND fr.id_videogame  = f.id_videogame
+        WHERE fr.first_redeem >= f.first_started
         GROUP BY f.id_videogame
+        HAVING avg_minutes_to_redeem IS NOT NULL
     """
 
     rows = db.execute(text(query)).mappings().all()
