@@ -27,6 +27,22 @@ class PointsAdjustRequest(BaseModel):
     reason: Optional[str] = None
     videogame_id: Optional[int] = None
 
+# Functions
+
+def _parse_json(value):
+    """
+    Convierte a dict/lista si es JSON string, o devuelve None si es null/None.
+    Si falla el parsing, devuelve el valor original (raw).
+    """
+    if value is None:
+        return None
+    if isinstance(value, (dict, list)):
+        return value
+    # Si es string, intenta parsear
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return value
 
 # Attributes & Subattributes
 
@@ -206,17 +222,6 @@ def get_points_ledger(
           id_sensor_ingest_event
         FROM points_ledger
     """
-    
-    def _parse_json(value):
-        if value is None:
-            return None
-        if isinstance(value, (dict, list)):
-            return value
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, TypeError):
-            return value
-
     conditions = []
     params: dict = {}
 
