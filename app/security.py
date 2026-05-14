@@ -18,9 +18,9 @@ AUTH_OPEN_ALL = os.getenv("AUTH_OPEN_ALL", "false").lower() == "true"
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
-ROLE_ALL = ["player", "teacher", "researcher", "admin"]
+ROLE_ALL = ["player", "teacher", "researcher", "admin", "developer"]
 
-_ROLE_PRIORITY = ["admin", "researcher", "teacher", "player"]
+_ROLE_PRIORITY = ["admin", "developer", "researcher", "teacher", "player"]
 
 class CurrentUser(BaseModel):
     """
@@ -200,14 +200,14 @@ def guard_player_access(
     Guard para endpoints que operan sobre datos de UN jugador específico.
 
     Reglas:
-    - admin / researcher / teacher → acceso a cualquier player_id.
+    - admin / researcher / teacher / developer → acceso a cualquier player_id.
     - player → solo puede acceder a su propio player_id.
     - AUTH_OPEN_ALL=true → bypass (solo staging).
     """
     if AUTH_OPEN_ALL:
         return current_user
 
-    elevated = {"admin", "researcher", "teacher"}
+    elevated = {"admin", "researcher", "teacher", "developer"}
     if any(r in elevated for r in current_user.roles):
         return current_user
 
