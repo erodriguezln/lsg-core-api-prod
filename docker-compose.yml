@@ -49,7 +49,7 @@ services:
 
       # Metadata
       APP_ENV: production
-      API_VERSION: "1.2.0"
+      API_VERSION: "1.2.3"
       GIT_COMMIT: "diinf-deploy"
 
       # JWT / Auth
