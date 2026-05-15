@@ -250,6 +250,15 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 ## Changelog
 
+### v1.2.3 (2026-05-15)
+
+- Agregado endpoint para agregar mecánicas por juego (bulk).
+
+**Bugfixes:**
+- Fix de JSON options en algunos endpoints.
+- Se corrigieron los nombres de attribute y subattribute para las dimensiones.
+- Se arregló el game session para que guarde la duración de la partida.
+
 ### v1.2.2.1 (2026-05-13)
 
 - Roles expandidos a "player" y "developer" para que puedan usar la API.
