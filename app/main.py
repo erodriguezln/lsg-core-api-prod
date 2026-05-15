@@ -55,7 +55,7 @@ Fuente:
 
 app = FastAPI(
     title="LifeSync-Games Core API",
-    version="1.2.1",
+    version="1.2.3",
     root_path=ROOT_PATH,
     description=CORE_DOCS_DESCRIPTION,
 )
