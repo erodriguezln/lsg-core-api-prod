@@ -2,7 +2,7 @@
 
 Servicio FastAPI que expone la lógica de dominio de LifeSync-Games sobre la base de datos `db_lsg` (MySQL 8).
 
-**Versión:** 1.2.2 | **Swagger:** https://lsg.diinf.usach.cl/lsg-core-api/docs  
+**Versión:** 1.2.3 | **Swagger:** https://lsg.diinf.usach.cl/lsg-core-api/docs  
 **Requiere token de:** https://lsg.diinf.usach.cl/lsg-auth/docs
 
 ---
