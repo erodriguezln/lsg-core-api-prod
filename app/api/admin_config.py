@@ -583,7 +583,9 @@ def admin_list_point_dimensions(
             SELECT
               id_point_dimension,
               id_attributes,
+              (SELECT name FROM attributes WHERE id_attributes = point_dimension.id_attributes) AS attribute_name,
               id_subattributes,
+              (SELECT name FROM subattributes WHERE id_subattributes = point_dimension.id_subattributes) AS subattribute_name,
               code,
               name
             FROM point_dimension
@@ -613,7 +615,9 @@ def admin_get_point_dimension(
         SELECT
           id_point_dimension,
           id_attributes,
+          (SELECT name FROM attributes WHERE id_attributes = point_dimension.id_attributes) AS attribute_name,
           id_subattributes,
+          (SELECT name FROM subattributes WHERE id_subattributes = point_dimension.id_subattributes) AS subattribute_name,
           code,
           name
         FROM point_dimension
