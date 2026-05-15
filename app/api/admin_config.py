@@ -147,6 +147,12 @@ def _ensure_exists(db: Session, query: str, params: dict, not_found_msg: str):
         raise HTTPException(status_code=404, detail=not_found_msg)
     return row
 
+def _parse_json(v):
+    if isinstance(v, str):
+        try: return json.loads(v)
+        except: pass
+    return v
+
 
 # Attributes CRUD
 
@@ -1089,14 +1095,6 @@ def admin_create_mod_mech_vg(
 
     **Roles disponibles:** "admin", "researcher", "developer"
     """
-    import json
-
-    def _parse_json(v):
-        if isinstance(v, str):
-            try: return json.loads(v)
-            except: pass
-        return v
-
 
     # Validamos FKs
     _ensure_exists(
@@ -1160,14 +1158,6 @@ def admin_update_mod_mech_vg(
 
     **Roles disponibles:** "admin", "researcher", "developer"
     """
-    import json
-
-def _parse_json(v):
-    if isinstance(v, str):
-        try: return json.loads(v)
-        except: pass
-    return v
-
 
     _ensure_exists(
         db,
