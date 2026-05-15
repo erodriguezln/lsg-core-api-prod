@@ -362,11 +362,11 @@ def admin_list_subattributes(
     base = """
         SELECT
             id_subattributes,
-            name AS subattributes_name,
-            description AS description_subattributes,
-            attributes_id_attributes AS id_attribute,
-            (SELECT name FROM attributes WHERE id_attributes = attributes_id_attributes) AS attributes_name,
-            (SELECT description FROM attributes WHERE id_attributes = attributes_id_attributes) AS attributes_description,
+            name,
+            description,
+            attributes_id_attributes AS attribute_id,
+            (SELECT name FROM attributes WHERE id_attributes = attributes_id_attributes) AS attribute_name,
+            (SELECT description FROM attributes WHERE id_attributes = attributes_id_attributes) AS attribute_description,
             created_at,
             updated_at
         FROM subattributes
@@ -398,11 +398,11 @@ def admin_get_subattribute(
         """
         SELECT
             sa.id_subattributes,
-            sa.name AS subattributes_name,
-            sa.description AS description_subattributes,
-            sa.attributes_id_attributes AS id_attribute,
-            a.name AS attributes_name,
-            a.description AS attributes_description,
+            sa.name,
+            sa.description,
+            sa.attributes_id_attributes AS attribute_id,
+            a.name AS attribute_name,
+            a.description AS attribute_description,
             sa.created_at,
             sa.updated_at
         FROM subattributes sa
