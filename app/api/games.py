@@ -637,8 +637,7 @@ def end_session(
                 UPDATE lsg_game_session s
                 JOIN player_videogame pvg
                   ON s.id_player_videogame = pvg.id_player_videogame
-                SET s.ended_at = :ended_at,
-                    s.duration_seconds = TIMESTAMPDIFF(SECOND, s.started_at, :ended_at)
+                SET s.ended_at = :ended_at
                 WHERE s.id_lsg_game_session = :sid
                   AND pvg.id_players = :pid
                   AND pvg.id_videogame = :gid
