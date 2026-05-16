@@ -2,7 +2,7 @@
 ## API Principal LifeSync-Games
 
 **URL del servicio:** https://lsg.diinf.usach.cl/lsg-core-api/docs  
-**Versión:** 1.2.1 | **Proyecto:** LifeSync-Games - InTeractiOn Lab, USACH
+**Versión:** 1.2.2 | **Proyecto:** LifeSync-Games - InTeractiOn Lab, USACH
 
 ---
 
@@ -26,15 +26,18 @@ El token expira en **120 minutos**. Si ves un error 401, renueva el token repiti
 
 ## Tabla de acceso por rol
 
-| Sección | player | teacher | researcher | admin |
-|---------|:------:|:-------:|:----------:|:-----:|
-| Ver mis propios datos | OK | OK | OK | OK |
-| Ver datos de otros jugadores | X | OK | OK | OK |
-| Crear/modificar configuración | X | X | OK | OK |
-| Administración del sistema | X | X | X | OK |
-| Exportar datos de investigación | X | X | OK | OK |
-| Calcular y ver IC² propio | OK | OK | OK | OK |
-| Ver IC² de otros | X | OK | OK | OK |
+| Sección | player | teacher | researcher | developer | admin |
+|---------|:------:|:-------:|:----------:|:---------:|:-----:|
+| Ver mis propios datos | OK | OK | OK | OK | OK |
+| Ver datos de otros jugadores | X | OK | OK | OK | OK |
+| Crear videojuegos y mecánicas | X | X | OK | OK | OK |
+| Ajustar puntos de jugadores | X | X | OK | OK | OK |
+| Administración del sistema | X | X | X | X | OK |
+| Exportar datos de investigación | X | X | OK | X | OK |
+| Calcular y ver IC² propio | OK | OK | OK | OK | OK |
+| Ver IC² de otros | X | OK | OK | X | OK |
+
+> **Token y roles:** Si te acaban de asignar un rol nuevo (ej: `developer`), el token actual **no lo incluirá** - los roles se graban en el JWT al momento del login. Renueva con `POST /lsg-auth/token/refresh` o haz un nuevo `POST /login` para que el rol sea efectivo.
 
 ---
 
@@ -322,7 +325,7 @@ curl -X GET 'https://lsg.diinf.usach.cl/lsg-core-api/points/ledger?player_id=46&
 
 **¿Para qué sirve?** Agregar o quitar puntos manualmente a un jugador (ej: corrección de datos, puntos de compensación). Queda registrado con `source_type = ADJUST`.
 
-**Roles:** admin, researcher
+**Roles:** admin, researcher, developer
 
 **Body JSON:**
 
@@ -1017,6 +1020,59 @@ curl -X GET \
 | `version_tag` | Versión de goalposts (default: todos) |
 | `format` | `json` o `csv` |
 | `include_raw_ids` | `false` (default): seudonimizado |
+
+---
+
+## 11. Rol developer - Guía de integración de mods
+
+El rol `developer` está diseñado para quienes integran el mod LSG en un videojuego. Tiene acceso a las operaciones necesarias para el ciclo completo de pruebas.
+
+### Endpoints disponibles para developer
+
+| Grupo | Endpoint | Descripción |
+|-------|----------|-------------|
+| Videojuegos | `POST /videogames` | Registrar el videojuego en el sistema |
+| Mecánicas | `POST /videogames/{id}/mechanics/bulk` | Cargar hasta 500 mecánicas en lote |
+| Mecánicas | `POST /videogames/mechanics/catalog` | Crear mecánica individual |
+| Mecánicas | `POST /videogames/{id}/mechanics` | Vincular mecánica al juego |
+| Sesiones | `POST /videogames/{id}/players/{pid}/sessions` | Iniciar sesión de juego |
+| Sesiones | `PATCH .../sessions/{sid}/end` | Cerrar sesión |
+| Canjes | `POST .../redeem/preview` | Preview de canje |
+| Canjes | `POST .../redeem` | Confirmar canje |
+| Puntos | `POST /players/{id}/points/adjust` | Cargar/ajustar puntos directamente |
+| IC² | `POST /ic2/compute` | Calcular IC² para pruebas |
+| Offline | `POST /offline/sync` | Sincronizar puntos generados offline |
+
+### Flujo típico de integración
+
+```
+1. POST /videogames            → crear juego, guardar id_videogame
+2. POST /videogames/{id}/mechanics/bulk  → cargar mecánicas del mod
+3. POST /videogames/{id}/players/{pid}/connect  → vincular jugador de prueba
+4. POST /videogames/{id}/players/{pid}/sessions → abrir sesión
+   ... el jugador interactúa con el mod ...
+   POST /players/{pid}/points/adjust     → cargar puntos del evento
+   POST /videogames/{id}/players/{pid}/redeem → canjear mecánica
+5. PATCH .../sessions/{sid}/end          → cerrar sesión
+6. GET /players/{pid}/points/balance     → verificar saldo resultante
+```
+
+### ⚠️ Importante: token actualizado
+
+Si el admin te acaba de asignar el rol `developer`, tu token anterior **no incluye ese rol** y recibirás un error 403. Solución:
+
+```bash
+# Opción 1: renovar sin re-login (recomendado)
+curl -X POST 'https://lsg.diinf.usach.cl/lsg-auth/token/refresh' \
+  -H 'Authorization: Bearer <token_antiguo>'
+
+# Opción 2: hacer login nuevamente
+curl -X POST 'https://lsg.diinf.usach.cl/lsg-auth/login' \
+  -d 'username=tu@email.cl&password=tu_contraseña'
+```
+
+Usa el nuevo `access_token` en Swagger: botón **Authorize** → `Bearer <nuevo_token>`.
+
 
 ---
 
