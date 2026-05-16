@@ -250,6 +250,11 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 ## Changelog
 
+### v1.2.3.1 (2026-05-16)
+
+**Bugfixes:**
+- **`security.py`** - Fix para que los endpoints de healthcheck no requieran token JWT.
+
 ### v1.2.3 (2026-05-15)
 
 - Agregado endpoint para agregar mecánicas por juego (bulk).
