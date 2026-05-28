@@ -158,6 +158,7 @@ def get_time_to_first_redeem(
         )
         SELECT
           f.id_videogame,
+          vg.name AS videogame_name,
           ROUND(AVG(TIMESTAMPDIFF(MINUTE, f.first_started, fr.first_redeem)), 1)
             AS avg_minutes_to_redeem,
           COUNT(*) AS n_players
@@ -165,8 +166,10 @@ def get_time_to_first_redeem(
         JOIN first_redeem fr
           ON fr.id_players   = f.id_players
          AND fr.id_videogame  = f.id_videogame
+        JOIN videogame vg
+          ON vg.id_videogame = f.id_videogame
         WHERE fr.first_redeem >= f.first_started
-        GROUP BY f.id_videogame
+        GROUP BY f.id_videogame, vg.name
         HAVING avg_minutes_to_redeem IS NOT NULL
     """
 
