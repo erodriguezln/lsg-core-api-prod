@@ -143,7 +143,8 @@ def list_videogames(
               publisher,
               launch,
               version,
-              type
+              type,
+              executable
             FROM videogame
             ORDER BY name
             """
@@ -175,7 +176,8 @@ def get_videogame(
               publisher,
               launch,
               version,
-              type
+              type,
+              executable
             FROM videogame
             WHERE id_videogame = :id
             """
@@ -200,6 +202,7 @@ class VideogameCreateRequest(BaseModel):
     launch: Optional[str] = None
     version: Optional[str] = None
     type: Optional[str] = None
+    executable: Optional[str] = None
 
 
 @router.post("", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
@@ -247,7 +250,8 @@ def create_videogame(
         "publisher": payload.publisher,
         "launch": payload.launch,
         "version": payload.version,
-        "type": payload.type
+        "type": payload.type,
+        "executable": payload.executable
     }
 
     try:
@@ -256,9 +260,9 @@ def create_videogame(
                 text(
                     """
                     INSERT INTO videogame (
-                      name, genre, description, engine, developer, publisher, launch, version, type
+                      name, genre, description, engine, developer, publisher, launch, version, type, executable
                     ) VALUES (
-                      :name, :genre, :description, :engine, :developer, :publisher, :launch, :version, :type
+                      :name, :genre, :description, :engine, :developer, :publisher, :launch, :version, :type, :executable
                     )
                     """
                 ),
@@ -270,9 +274,9 @@ def create_videogame(
                 text(
                     """
                     INSERT INTO videogame (
-                      id_videogame, name, genre, description, engine, developer, publisher, launch, version, type
+                      id_videogame, name, genre, description, engine, developer, publisher, launch, version, type, executable
                     ) VALUES (
-                      :id_videogame, :name, :genre, :description, :engine, :developer, :publisher, :launch, :version, :type
+                      :id_videogame, :name, :genre, :description, :engine, :developer, :publisher, :launch, :version, :type, :executable
                     )
                     """
                 ),
@@ -290,7 +294,7 @@ def create_videogame(
         text(
             """
             SELECT
-              id_videogame, name, genre, description, engine, developer, publisher, launch, version, type
+              id_videogame, name, genre, description, engine, developer, publisher, launch, version, type, executable
             FROM videogame
             WHERE id_videogame = :id
             """
