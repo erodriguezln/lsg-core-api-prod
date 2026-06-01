@@ -250,6 +250,12 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 ## Changelog
 
+### v1.2.3.2 (2026-06-02)
+
+**Nuevas funcionalidades:**
+
+- Se agregó el campo `executable` a la tabla `videogame`.
+
 ### v1.2.3.1 (2026-05-16)
 
 **Bugfixes:**
