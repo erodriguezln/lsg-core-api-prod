@@ -27,11 +27,24 @@ def get_points_balance(
 
     **Roles disponibles:** "admin", "researcher", "developer"
     """
-    base_query = "SELECT * FROM v_points_balance"
+    base_query = """
+        SELECT
+          vpb.id_players,
+          p.name AS player_name,
+          p.email AS player_email,
+          vpb.id_point_dimension,
+          pd.name AS point_dimension_name,
+          vpb.balance
+        FROM v_points_balance vpb
+        JOIN players p
+          ON p.id_players = vpb.id_players
+        LEFT JOIN point_dimension pd
+          ON pd.id_point_dimension = vpb.id_point_dimension
+    """
     params = {}
 
     if player_id is not None:
-        base_query += " WHERE id_players = :player_id"
+        base_query += " WHERE vpb.id_players = :player_id"
         params["player_id"] = player_id
 
     result = db.execute(text(base_query), params)
