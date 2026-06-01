@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from typing import Optional
 
@@ -337,8 +338,7 @@ def get_videogame_mechanics(
         # options stored as JSON string in MySQL → parse to dict
         if r.get("options") and isinstance(r["options"], str):
             try:
-                import json as _json
-                r["options"] = _json.loads(r["options"])
+                r["options"] = json.loads(r["options"])
             except (ValueError, TypeError):
                 pass
         result.append(r)
@@ -396,7 +396,6 @@ def redeem_mechanic(
     **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     from uuid import uuid4
-    import json
 
     _assert_mmv_exists_for_game(db, game_id, payload.modifiable_mechanic_videogame_id)
 
@@ -515,8 +514,6 @@ def _get_or_create_player_videogame(
     settings: Optional[dict],
 ) -> int:
     """Obtiene id_player_videogame o lo crea. Helper interno (sin inyección de deps)."""
-    import json
-
     row = db.execute(
         text("""
             SELECT id_player_videogame
@@ -575,8 +572,6 @@ def start_session(
 
     **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
-    import json
-
     started_at = payload.started_at or datetime.utcnow()
 
     try:
@@ -754,8 +749,6 @@ def attach_mechanic_to_videogame(
 
     **Roles disponibles:** "admin", "researcher", "developer"
     """
-    import json
-
     vg = db.execute(
         text("SELECT 1 FROM videogame WHERE id_videogame = :gid"),
         {"gid": game_id},
@@ -830,8 +823,6 @@ def connect_player_videogame(
 
     **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
-    import json
-
     enabled_val = 1 if (payload.lsg_enabled is None or payload.lsg_enabled) else 0
     settings_json = json.dumps(payload.settings) if payload.settings is not None else None
 
@@ -884,8 +875,8 @@ class BulkMechanicItem(BaseModel):
  
 class BulkMechanicsRequest(BaseModel):
     mechanics: list = []
- 
- 
+
+
 @router.post(
     "/{game_id}/mechanics/bulk",
     status_code=207,
@@ -991,7 +982,7 @@ def bulk_attach_mechanics(
                     {
                         "gid":  game_id,
                         "mid":  mm_id,
-                        "opts": _json.dumps(options) if options else None,
+                        "opts": json.dumps(options) if options else None,
                     },
                 )
                 mmv_id = res2.lastrowid
@@ -1018,4 +1009,3 @@ def bulk_attach_mechanics(
         "errors":  errored,
         "results": results,
     }
- 
