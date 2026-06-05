@@ -254,8 +254,9 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 **Nuevas funcionalidades:**
 
-- Se agregó el endpoint `DELETE /admin/modifiable-mechanics/{mm_id}` que permite eliminar una mecánica.
 - Se agregó el endpoint `POST /game-logs/sessions` que permite subir el log de una sesión de juego.
+- **Bugfixes:**
+    - Se corrigió un error en el endpoint `DELETE /admin/modifiable-mechanics/{mm_id}` que no permitía eliminar una mecánica.
 
 ### v1.2.3.2 (2026-06-02)
 
