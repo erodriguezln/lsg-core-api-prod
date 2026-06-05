@@ -12,6 +12,7 @@ from app.api import (
     admin_config,
     admin_points,
     research_export,
+    game_logs,
 )
 from app.api import ic2      
 from app.api import offline  
@@ -71,6 +72,8 @@ app.include_router(sensors.router,   prefix="/sensors",    tags=["sensors"])
 
 app.include_router(analytics.router, prefix="/analytics",  tags=["analytics"])
 app.include_router(meta.router,      prefix="/meta",        tags=["meta"])
+
+app.include_router(game_logs.router, prefix="/game-logs", tags=["game-logs"])
 
 app.include_router(admin_config.router)     # prefix="/admin" incluido
 app.include_router(admin_points.router)     # prefix="/admin/points" incluido

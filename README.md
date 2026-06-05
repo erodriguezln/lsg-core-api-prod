@@ -250,6 +250,12 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 ## Changelog
 
+### v1.2.3.3 (2026-06-06)
+
+**Nuevas funcionalidades:**
+
+- Se agregó el endpoint `DELETE /admin/modifiable-mechanics/{mm_id}` que permite eliminar una mecánica.
+
 ### v1.2.3.2 (2026-06-02)
 
 **Nuevas funcionalidades:**
