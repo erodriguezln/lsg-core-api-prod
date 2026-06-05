@@ -381,7 +381,7 @@ def export_ic2_results(
         None, description="Filtra por id_players (opcional)"
     ),
     experiment_tag: Optional[str] = Query(
-        None, description="Etiqueta FONDECYT (ej: LSG_C1_T1_CV)"
+        None, description="Etiqueta personalizada (ej: LSG_C1_T1_CV)"
     ),
     version_tag: Optional[str] = Query(
         None, description="Versión de goalposts (default: todos)"

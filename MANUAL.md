@@ -445,7 +445,7 @@ Guarda el `id_session` para cerrar la sesión después.
 
 ### PATCH /videogames/{id}/players/{pid}/sessions/{sid}/end - Cerrar sesión de juego
 
-**¿Para qué sirve?** Registrar el cierre de una sesión. El sistema calcula automáticamente la duración (`duration_seconds`). También registra el evento en `interaction_logs` para trazabilidad FONDECYT.
+**¿Para qué sirve?** Registrar el cierre de una sesión. El sistema calcula automáticamente la duración (`duration_seconds`). También registra el evento en `interaction_logs` para trazabilidad.
 
 **Roles:** todos (player solo para sí mismo)
 
@@ -501,7 +501,7 @@ curl -X POST 'https://lsg.diinf.usach.cl/lsg-core-api/videogames/14/players/46/r
 
 ### POST /videogames/{id}/players/{pid}/redeem - Realizar canje
 
-**¿Para qué sirve?** Efectuar el canje de puntos por una mecánica del juego. Si el jugador tiene saldo suficiente, se descuentan los puntos y se activa la mecánica. Se registra en `interaction_logs` para trazabilidad FONDECYT.
+**¿Para qué sirve?** Efectuar el canje de puntos por una mecánica del juego. Si el jugador tiene saldo suficiente, se descuentan los puntos y se activa la mecánica. Se registra en `interaction_logs` para trazabilidad.
 
 **Roles:** todos (player solo para sí mismo)
 
@@ -904,7 +904,7 @@ Estos endpoints son para researcher y admin. Proveen vistas agregadas para anál
 
 ### GET /analytics/ic2/summary - Resumen estadístico IC² por condición
 
-**¿Para qué sirve?** Ver la media, desviación estándar, mínimo y máximo del IC² agrupado por `experiment_tag`. Compatible con el análisis Q01 de FONDECYT.
+**¿Para qué sirve?** Ver la media, desviación estándar, mínimo y máximo del IC² agrupado por `experiment_tag`. Compatible con el análisis Q01.
 
 **Roles:** admin, researcher
 

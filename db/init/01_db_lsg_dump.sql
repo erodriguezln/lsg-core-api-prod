@@ -387,7 +387,7 @@ CREATE TABLE `interaction_logs` (
   `id_players` int NOT NULL,
   `id_videogame` int unsigned NOT NULL,
   `event_type` varchar(64) NOT NULL COMMENT 'ej: redeem, sensor_ingest, session_start, ic2_compute',
-  `experiment_tag` varchar(128) DEFAULT NULL COMMENT 'etiqueta para filtrado en análisis FONDECYT (ej: LSG_PILOT_2026)',
+  `experiment_tag` varchar(128) DEFAULT NULL COMMENT 'etiqueta para filtrado en análisis (ej: LSG_PILOT_2026)',
   `occurred_at` timestamp NOT NULL,
   `metrics` json DEFAULT NULL COMMENT 'payload de métricas: {IC_fis, IC_ment, IC_LSG, IAR, raw_signals:{...}}',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -398,7 +398,7 @@ CREATE TABLE `interaction_logs` (
   KEY `fk_il_game` (`id_videogame`),
   CONSTRAINT `fk_il_game` FOREIGN KEY (`id_videogame`) REFERENCES `videogame` (`id_videogame`),
   CONSTRAINT `fk_il_player` FOREIGN KEY (`id_players`) REFERENCES `players` (`id_players`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Bitácora de interacciones para análisis longitudinal FONDECYT';
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Bitácora de interacciones para análisis longitudinal';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1193,12 +1193,12 @@ DROP TABLE IF EXISTS `research_pseudonym`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `research_pseudonym` (
   `id_players` int NOT NULL,
-  `pseudo_code` varchar(16) NOT NULL COMMENT 'Código LSG-PXXX asignado para exportaciones FONDECYT',
+  `pseudo_code` varchar(16) NOT NULL COMMENT 'Código LSG-PXXX asignado para exportaciones',
   `assigned_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_players`),
   UNIQUE KEY `uq_pseudo_code` (`pseudo_code`),
   CONSTRAINT `fk_rp_player` FOREIGN KEY (`id_players`) REFERENCES `players` (`id_players`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Mapeo estable jugador → LSG-PXXX para seudonimización FONDECYT.';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Mapeo estable jugador → LSG-PXXX para seudonimización.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2034,7 +2034,7 @@ DELIMITER ;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_audit_export` AS select sha2(concat('LSG-FONDECYT-2026:',`r`.`id_players`),256) AS `player_pseudo`,`r`.`experiment_tag` AS `experiment_tag`,substring_index(`r`.`experiment_tag`,'_',-(1)) AS `condicion`,substring_index(substring_index(`r`.`experiment_tag`,'_',3),'_',-(1)) AS `periodo`,`r`.`window_start` AS `window_start`,`r`.`window_end` AS `window_end`,`r`.`Icf` AS `Icf`,`r`.`Isfg` AS `Isfg`,`r`.`Ipma` AS `Ipma`,`r`.`Itd` AS `Itd`,`r`.`IC_fis` AS `IC_fis`,`r`.`IC_ment` AS `IC_ment`,`r`.`IC_LSG` AS `IC_LSG`,`r`.`IAR` AS `IAR`,json_value(`r`.`admissibility`, '$.Icf' returning char(512)) AS `adm_Icf`,json_value(`r`.`admissibility`, '$.Isfg' returning char(512)) AS `adm_Isfg`,json_value(`r`.`admissibility`, '$.Ipma' returning char(512)) AS `adm_Ipma`,json_value(`r`.`admissibility`, '$.Itd' returning char(512)) AS `adm_Itd`,json_value(`r`.`raw_inputs`, '$.steps_day' returning char(512)) AS `steps_day`,json_value(`r`.`raw_inputs`, '$.MVPA_min_week' returning char(512)) AS `MVPA_min_week`,json_value(`r`.`raw_inputs`, '$.resting_hr_bpm' returning char(512)) AS `resting_hr_bpm`,json_value(`r`.`raw_inputs`, '$.sleep_quality_score' returning char(512)) AS `sleep_quality_score`,json_value(`r`.`raw_inputs`, '$.memory_accuracy_pct' returning char(512)) AS `memory_accuracy_pct`,json_value(`r`.`raw_inputs`, '$.recall_speed_ms' returning char(512)) AS `recall_speed_ms`,json_value(`r`.`raw_inputs`, '$.decision_accuracy_pct' returning char(512)) AS `decision_accuracy_pct`,json_value(`r`.`raw_inputs`, '$.reaction_time_ms' returning char(512)) AS `reaction_time_ms`,`r`.`computed_at` AS `computed_at` from `ic2_result` `r` where (`r`.`experiment_tag` is not null) */;
+/*!50001 VIEW `v_audit_export` AS select sha2(concat('LSG-2026:',`r`.`id_players`),256) AS `player_pseudo`,`r`.`experiment_tag` AS `experiment_tag`,substring_index(`r`.`experiment_tag`,'_',-(1)) AS `condicion`,substring_index(substring_index(`r`.`experiment_tag`,'_',3),'_',-(1)) AS `periodo`,`r`.`window_start` AS `window_start`,`r`.`window_end` AS `window_end`,`r`.`Icf` AS `Icf`,`r`.`Isfg` AS `Isfg`,`r`.`Ipma` AS `Ipma`,`r`.`Itd` AS `Itd`,`r`.`IC_fis` AS `IC_fis`,`r`.`IC_ment` AS `IC_ment`,`r`.`IC_LSG` AS `IC_LSG`,`r`.`IAR` AS `IAR`,json_value(`r`.`admissibility`, '$.Icf' returning char(512)) AS `adm_Icf`,json_value(`r`.`admissibility`, '$.Isfg' returning char(512)) AS `adm_Isfg`,json_value(`r`.`admissibility`, '$.Ipma' returning char(512)) AS `adm_Ipma`,json_value(`r`.`admissibility`, '$.Itd' returning char(512)) AS `adm_Itd`,json_value(`r`.`raw_inputs`, '$.steps_day' returning char(512)) AS `steps_day`,json_value(`r`.`raw_inputs`, '$.MVPA_min_week' returning char(512)) AS `MVPA_min_week`,json_value(`r`.`raw_inputs`, '$.resting_hr_bpm' returning char(512)) AS `resting_hr_bpm`,json_value(`r`.`raw_inputs`, '$.sleep_quality_score' returning char(512)) AS `sleep_quality_score`,json_value(`r`.`raw_inputs`, '$.memory_accuracy_pct' returning char(512)) AS `memory_accuracy_pct`,json_value(`r`.`raw_inputs`, '$.recall_speed_ms' returning char(512)) AS `recall_speed_ms`,json_value(`r`.`raw_inputs`, '$.decision_accuracy_pct' returning char(512)) AS `decision_accuracy_pct`,json_value(`r`.`raw_inputs`, '$.reaction_time_ms' returning char(512)) AS `reaction_time_ms`,`r`.`computed_at` AS `computed_at` from `ic2_result` `r` where (`r`.`experiment_tag` is not null) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;

@@ -338,8 +338,6 @@ def get_videogame_logs(
     Lista todos los logs de sesiones de un videojuego. Solo métricas resumen,
     sin `raw_log` (usar `GET /game-logs/sessions/{id}` para el detalle completo).
 
-    Compatible con análisis longitudinal FONDECYT.
-
     **Roles disponibles:** "admin", "researcher", "developer"
     """
     base = """
