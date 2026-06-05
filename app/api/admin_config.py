@@ -843,34 +843,96 @@ def admin_list_mod_mechanics(
     return list(rows)
 
 
-@router.get(
+@router.delete(
     "/modifiable-mechanics/{mm_id}",
-    dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))],
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(["admin"]))],
 )
-def admin_get_mod_mechanic(
+def admin_delete_mod_mechanic(
     mm_id: int,
+    force: bool = Query(
+        False,
+        description=(
+            "false (default): retorna 409 con detalle de dependencias si la mecánica está en uso. "
+            "true: elimina en cascada modifiable_mechanic_videogames y "
+            "modifiable_conversion_attribute antes de borrar. Irreversible."
+        ),
+    ),
     db: Session = Depends(get_db),
 ):
     """
-    # GET /modifiable-mechanics/{mm_id}
+    # DELETE /modifiable-mechanics/{mm_id}
 
-    **Roles disponibles:** "admin", "researcher", "developer"
+    Elimina una mecánica del catálogo.
+
+    **`force=false` (default):** si la mecánica está en uso, retorna **409** con
+    detalle de cuántos vínculos existen en las tablas dependientes.
+
+    **`force=true`:** elimina en cascada todos los vínculos y luego la mecánica.
+    Acción irreversible — afecta canjes y configuraciones de videojuegos.
+
+    **Roles disponibles:** "admin"
     """
-    row = _ensure_exists(
+    _ensure_exists(
         db,
-        """
-        SELECT
-          id_modifiable_mechanic,
-          name,
-          description,
-          type
-        FROM modifiable_mechanic
-        WHERE id_modifiable_mechanic = :id
-        """,
+        "SELECT id_modifiable_mechanic FROM modifiable_mechanic WHERE id_modifiable_mechanic = :id",
         {"id": mm_id},
         "Modifiable mechanic not found",
     )
-    return dict(row)
+
+    # Pre-check: contar dependencias antes de intentar borrar
+    mmv_count = db.execute(
+        text("SELECT COUNT(*) FROM modifiable_mechanic_videogames "
+             "WHERE id_modifiable_mechanic = :id"),
+        {"id": mm_id},
+    ).scalar() or 0
+
+    mca_count = db.execute(
+        text("SELECT COUNT(*) FROM modifiable_conversion_attribute "
+             "WHERE id_modifiable_mechanic = :id"),
+        {"id": mm_id},
+    ).scalar() or 0
+
+    if (mmv_count or mca_count) and not force:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code":    "MECHANIC_IN_USE",
+                "message": f"La mecánica {mm_id} está en uso. Usa ?force=true para eliminar en cascada.",
+                "dependencies": {
+                    "modifiable_mechanic_videogames":  mmv_count,
+                    "modifiable_conversion_attribute": mca_count,
+                },
+                "hint": (
+                    "Elimina primero los vínculos con DELETE /admin/modifiable-mechanics-videogames/{id}, "
+                    "o usa ?force=true para cascada automática."
+                ),
+            },
+        )
+
+    try:
+        if force:
+            db.execute(
+                text("DELETE FROM modifiable_conversion_attribute "
+                     "WHERE id_modifiable_mechanic = :id"),
+                {"id": mm_id},
+            )
+            db.execute(
+                text("DELETE FROM modifiable_mechanic_videogames "
+                     "WHERE id_modifiable_mechanic = :id"),
+                {"id": mm_id},
+            )
+        db.execute(
+            text("DELETE FROM modifiable_mechanic WHERE id_modifiable_mechanic = :id"),
+            {"id": mm_id},
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Error deleting modifiable mechanic: {e}",
+        )
 
 
 @router.post(
