@@ -2,7 +2,7 @@
 ## API Principal LifeSync-Games
 
 **URL del servicio:** https://lsg.diinf.usach.cl/lsg-core-api/docs  
-**Versión:** 1.2.2 | **Proyecto:** LifeSync-Games - InTeractiOn Lab, USACH
+**Versión:** 1.2.4 | **Proyecto:** LifeSync-Games - InTeractiOn Lab, USACH
 
 ---
 

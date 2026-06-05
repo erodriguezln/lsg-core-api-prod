@@ -2,7 +2,7 @@
 
 Servicio FastAPI que expone la lógica de dominio de LifeSync-Games sobre la base de datos `db_lsg` (MySQL 8).
 
-**Versión:** 1.2.3 | **Swagger:** https://lsg.diinf.usach.cl/lsg-core-api/docs  
+**Versión:** 1.2.4 | **Swagger:** https://lsg.diinf.usach.cl/lsg-core-api/docs  
 **Requiere token de:** https://lsg.diinf.usach.cl/lsg-auth/docs
 
 ---
@@ -250,11 +250,12 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 ## Changelog
 
-### v1.2.3.3 (2026-06-06)
+### v1.2.4 (2026-06-06)
 
 **Nuevas funcionalidades:**
 
 - Se agregó el endpoint `DELETE /admin/modifiable-mechanics/{mm_id}` que permite eliminar una mecánica.
+- Se agregó el endpoint `POST /game-logs/sessions` que permite subir el log de una sesión de juego.
 
 ### v1.2.3.2 (2026-06-02)
 
