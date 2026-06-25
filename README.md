@@ -250,10 +250,14 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 ## Changelog
 
+### v1.2.5 (2026-06-25)
+
+**Bugfixes:**
+    - **`points.py`** - Se corrigió un error en el endpoint `POST /players/{player_id}/points/adjust` que no permitía ajustar manualmente los puntos de un jugador.
+
 ### v1.2.4 (2026-06-06)
 
 **Nuevas funcionalidades:**
-
 - Se agregó el endpoint `POST /game-logs/sessions` que permite subir el log de una sesión de juego.
 - **Bugfixes:**
     - Se corrigió un error en el endpoint `DELETE /admin/modifiable-mechanics/{mm_id}` que no permitía eliminar una mecánica.
