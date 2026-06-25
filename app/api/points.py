@@ -24,7 +24,7 @@ class PointsAdjustRequest(BaseModel):
     """
     Cuerpo para POST /players/{id}/points/adjust.
 
-    Indica la dimensión usando **una** de estas opciones (prioridad: 1→2→3→4):
+    Indica la dimensión usando **una** de estas opciones (prioridad: 1->2->3->4):
 
     | Campo               | Ejemplo          | Cuándo usar                              |
     |---------------------|------------------|------------------------------------------|
@@ -45,7 +45,7 @@ class PointsAdjustRequest(BaseModel):
     )
     dimension_code:     Optional[str] = Field(
         None,
-        description="Código de point_dimension (ej: FISICO_BASE, CONDICION_FISICA, MENTAL_BASE)"
+        description="Código de point_dimension (ej.: FISICO_BASE, CONDICION_FISICA, MENTAL_BASE)"
     )
     point_dimension_id: Optional[int] = Field(
         None,
@@ -167,9 +167,50 @@ def get_player_points_balance(
     """
     # GET /players/{player_id}/points/balance
 
-    Lee desde v_points_balance.
+    Retorna el **saldo de puntos por dimensión** del jugador, enriquecido con el
+    nombre del atributo y el código de la dimensión.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
+    Cada fila representa una dimensión de `point_dimension` en la que el jugador
+    tiene movimientos registrados en `points_ledger`. El balance se calcula como:
+
+    ```
+    balance = SUM(amount WHERE direction='CREDIT') - SUM(amount WHERE direction='DEBIT')
+    ```
+
+    **Cuándo usar este endpoint:**
+    - Cuando el mod/sensor necesita saber si el jugador tiene suficientes puntos para canjear una mecánica específica de una dimensión.
+    - Para mostrar el saldo operacional antes de un canje.
+
+    **Diferencia con `/attributes/points`:**
+    - Este endpoint agrupa por **dimensión** (`id_point_dimension`), que es la unidad mínima del ledger. Incluye tanto dimensiones de atributo base (FISICO_BASE) como de subatributo (CONDICION_FISICA).
+    - `/attributes/points` agrupa por **atributo** (Social, Físico, etc.), sumando todas sus dimensiones. Es más semántico pero menos granular.
+
+    **Ejemplo de respuesta:**
+    ```json
+    [
+      {
+        "id_players": 46,
+        "id_point_dimension": 2,
+        "dimension_code": "FISICO_BASE",
+        "dimension_name": "Puntos de actividad física",
+        "id_attributes": 2,
+        "attribute_name": "Fisico",
+        "id_subattributes": null,
+        "subattribute_name": null,
+        "balance": 131
+      },
+      {
+        "id_point_dimension": 5,
+        "dimension_code": "CONDICION_FISICA",
+        "id_attributes": null,
+        "id_subattributes": 6,
+        "subattribute_name": "Condición física",
+        "balance": 10
+      }
+    ]
+    ```
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     rows = db.execute(
         text("""
@@ -204,9 +245,47 @@ def get_player_attribute_points(
     """
     # GET /players/{player_id}/attributes/points
 
-    Usa la vista v_player_attribute_balance.
+    Retorna el **saldo de puntos por atributo** del jugador (Social, Físico, Afectivo, Mental, etc.), agregando todas las dimensiones que pertenecen a cada atributo.
 
-    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
+    Además del balance actual calculado desde `points_ledger` (`balance_ledger`), incluye el **snapshot** almacenado en `players_attributes` (`snapshot_points`) y la diferencia entre ambos.
+
+    **Cuándo usar este endpoint:**
+    - Para mostrar al jugador su progreso general por área (ej.: "Tienes 245 puntos en Físico").
+    - Para el dashboard del investigador: ver el perfil de salud del participante.
+    - Para detectar inconsistencias: si `diff_ledger_minus_snapshot` es muy grande, el snapshot está desactualizado y conviene llamar `POST /players/{id}/attributes/init` para sincronizarlo.
+
+    **Diferencia con `/points/balance`:**
+    - Este endpoint agrupa por **atributo** (nivel alto: Social, Físico...). Suma FISICO_BASE + CONDICION_FISICA + cualquier otra dimensión que pertenezca al atributo Físico.
+    - `/points/balance` es más granular: muestra cada dimensión por separado.
+
+    **Campos:**
+    - `balance_ledger`: saldo real calculado en tiempo real desde `points_ledger`.
+    - `snapshot_points`: caché almacenado en `players_attributes`. Se actualiza manualmente (no en tiempo real).
+    - `diff_ledger_minus_snapshot`: diferencia. Si > 0, ocurrieron transacciones desde el último snapshot. Si < 0, hay una anomalía (nunca debería ocurrir).
+
+    **Ejemplo de respuesta:**
+    ```json
+    [
+      {
+        "id_players": 46,
+        "player_name": "jmacias",
+        "id_attributes": 2,
+        "attribute_name": "Fisico",
+        "balance_ledger": 245,
+        "snapshot_points": 200,
+        "diff_ledger_minus_snapshot": 45
+      },
+      {
+        "id_attributes": 4,
+        "attribute_name": "Mental",
+        "balance_ledger": 89,
+        "snapshot_points": 89,
+        "diff_ledger_minus_snapshot": 0
+      }
+    ]
+    ```
+
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     rows = db.execute(
         text(
@@ -311,16 +390,81 @@ def adjust_player_points(
     """
     # POST /players/{player_id}/points/adjust
 
-    Inserta un ajuste manual en points_ledger (source_type='ADJUST').
+    Inserta un movimiento manual de puntos en `points_ledger` con `source_type='ADJUST'`. Se usa cuando los puntos no provienen de un sensor (SENSOR) ni de un canje (REDEMPTION), sino de una asignación directa: pruebas de integración, compensaciones, correcciones, etc.
 
-    **Roles disponibles:** "admin", "researcher", "developer"  
+    ---
+
+    **¿Cómo indicar la dimensión?**
+
+    Usa **una sola** de estas cuatro formas (prioridad de izquierda a derecha):
+
+    | Campo               | Ejemplo          | Cuándo usar                                      |
+    |---------------------|------------------|--------------------------------------------------|
+    | `attribute_id`      | `2`              | Recomendado. Usa el `id_attributes` del atributo base (Social=1, Físico=2, Afectivo=3, Mental=4). |
+    | `subattribute_id`   | `6`              | Para dimensiones de subatributo (Condición Física=6, Regulación Emocional=11). |
+    | `dimension_code`    | `"FISICO_BASE"`  | Si conoces el código exacto de `point_dimension`. |
+    | `point_dimension_id`| `2`              | FK directo a `point_dimension`. Funciona pero puede confundirse con `id_attributes`. |
+
+    Consulta `GET /admin/point-dimensions` para ver todas las dimensiones disponibles y el mapeo completo `attribute_id` -> `id_point_dimension`.
+
+    ---
+
+    **Referencia rápida de dimensiones disponibles:**
+
+    ```
+    attribute_id=1 ->  SOCIAL_BASE      (Puntos de desarrollo social)
+    attribute_id=2 ->  FISICO_BASE      (Puntos de actividad física)
+    attribute_id=3 ->  AFECTIVO_BASE    (Puntos de bienestar afectivo)
+    attribute_id=4 ->  MENTAL_BASE      (Puntos de desarrollo mental)
+    subattribute_id=6 ->  CONDICION_FISICA  (Condición física, subatributo de Físico)
+    subattribute_id=11 -> REG_EMOCIONAL     (Regulación emocional, subatributo de Afectivo)
+    ```
+
+    ---
+
+    **Ejemplos de uso:**
+
+    ```bash
+    # Forma recomendada: attribute_id
+    curl -X POST '.../players/46/points/adjust' \
+      -d '{"attribute_id": 2, "direction": "CREDIT", "amount": 50,
+           "reason": "meta_hidratacion_2026-06-25", "videogame_id": 14}'
+
+    # Subatributo específico
+    curl -X POST '.../players/46/points/adjust' \
+      -d '{"subattribute_id": 6, "direction": "CREDIT", "amount": 30,
+           "reason": "condicion_fisica_sensor"}'
+
+    # Descontar puntos (canje manual / corrección)
+    curl -X POST '.../players/46/points/adjust' \
+      -d '{"attribute_id": 2, "direction": "DEBIT", "amount": 20,
+           "reason": "correccion_duplicado"}'
+    ```
+
+    ---
+
+    **Respuesta exitosa (200):**
+    ```json
+    {
+      "status": "ok",
+      "source_ref": "ADJUST-uuid...",
+      "id_point_dimension": 2,
+      "dimension_code": "FISICO_BASE",
+      "dimension_name": "Puntos de actividad física",
+      "attribute_name": "Fisico",
+      "direction": "CREDIT",
+      "amount": 50
+    }
+    ```
+
+    **Roles disponibles:** "admin", "researcher", "developer"
     """
     from uuid import uuid4
     import json
 
     source_ref = f"ADJUST-{uuid4()}"
 
-    # ── Resolver id_point_dimension desde el argumento recibido ─────────────────
+    # Resolver id_point_dimension desde el argumento recibido
     # Prioridad: attribute_id > subattribute_id > dimension_code > point_dimension_id
     resolved_pd_id: Optional[int] = None
 
@@ -388,7 +532,7 @@ def adjust_player_points(
                         "reason": "Puntos por actividad física"},
         })
 
-    # ── Info de la dimensión para enriquecer la respuesta ───────────────────────
+    # Info de la dimensión para enriquecer la respuesta
     dim = db.execute(
         text("""
             SELECT pd.code, pd.name AS dimension_name,
