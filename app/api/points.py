@@ -21,11 +21,43 @@ router = APIRouter()
 # Models
 
 class PointsAdjustRequest(BaseModel):
-    point_dimension_id: int = Field(..., alias="point_dimension_id")
-    direction: Literal["CREDIT", "DEBIT"]
-    amount: int = Field(..., gt=0)
-    reason: Optional[str] = None
+    """
+    Cuerpo para POST /players/{id}/points/adjust.
+
+    Indica la dimensión usando **una** de estas opciones (prioridad: 1→2→3→4):
+
+    | Campo               | Ejemplo          | Cuándo usar                              |
+    |---------------------|------------------|------------------------------------------|
+    | `attribute_id`      | 2                | Atributo base (Social=1, Físico=2, ...)  |
+    | `subattribute_id`   | 6                | Subatributo (Condición Física=6, ...)    |
+    | `dimension_code`    | "FISICO_BASE"    | Código exacto de point_dimension         |
+    | `point_dimension_id`| 2                | FK directo (deprecado, backward-compat)  |
+
+    Consulta GET /admin/point-dimensions para ver todas las dimensiones disponibles.
+    """
+    attribute_id:       Optional[int] = Field(
+        None,
+        description="id_attributes — RECOMENDADO (Social=1, Físico=2, Afectivo=3, Mental=4)"
+    )
+    subattribute_id:    Optional[int] = Field(
+        None,
+        description="id_subattributes — para dimensiones de subatributo (ej: Condición Física=6)"
+    )
+    dimension_code:     Optional[str] = Field(
+        None,
+        description="Código de point_dimension (ej: FISICO_BASE, CONDICION_FISICA, MENTAL_BASE)"
+    )
+    point_dimension_id: Optional[int] = Field(
+        None,
+        description="[DEPRECADO] FK directo a point_dimension. Usar attribute_id en su lugar."
+    )
+
+    direction:    Literal["CREDIT", "DEBIT"]
+    amount:       int = Field(..., gt=0)
+    reason:       Optional[str] = None
     videogame_id: Optional[int] = None
+
+    model_config = {"populate_by_name": True}
 
 # Functions
 
@@ -140,16 +172,24 @@ def get_player_points_balance(
     **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"    
     """
     rows = db.execute(
-        text(
-            """
+        text("""
             SELECT
-              id_players,
-              id_point_dimension,
-              balance
-            FROM v_points_balance
-            WHERE id_players = :player_id
-            """
-        ),
+              vpb.id_players,
+              vpb.id_point_dimension,
+              pd.code         AS dimension_code,
+              pd.name         AS dimension_name,
+              pd.id_attributes,
+              a.name          AS attribute_name,
+              pd.id_subattributes,
+              s.name          AS subattribute_name,
+              vpb.balance
+            FROM v_points_balance vpb
+            JOIN  point_dimension pd ON pd.id_point_dimension = vpb.id_point_dimension
+            LEFT JOIN attributes   a ON a.id_attributes       = pd.id_attributes
+            LEFT JOIN subattributes s ON s.id_subattributes   = pd.id_subattributes
+            WHERE vpb.id_players = :player_id
+            ORDER BY vpb.id_point_dimension
+        """),
         {"player_id": player_id},
     ).mappings().all()
 
@@ -208,19 +248,25 @@ def get_points_ledger(
     """
     base = """
         SELECT
-          id_points_ledger,
-          id_players,
-          id_point_dimension,
-          id_videogame,
-          direction,
-          amount,
-          source_type,
-          source_ref,
-          payload,
-          occurred_at,
-          created_at,
-          id_sensor_ingest_event
-        FROM points_ledger
+          pl.id_points_ledger,
+          pl.id_players,
+          pl.id_point_dimension,
+          pd.code         AS dimension_code,
+          pd.name         AS dimension_name,
+          COALESCE(pd.id_attributes, NULL)     AS id_attributes,
+          a.name          AS attribute_name,
+          pl.id_videogame,
+          pl.direction,
+          pl.amount,
+          pl.source_type,
+          pl.source_ref,
+          pl.payload,
+          pl.occurred_at,
+          pl.created_at,
+          pl.id_sensor_ingest_event
+        FROM points_ledger pl
+        LEFT JOIN point_dimension pd ON pd.id_point_dimension = pl.id_point_dimension
+        LEFT JOIN attributes       a ON a.id_attributes       = pd.id_attributes
     """
     conditions = []
     params: dict = {}
@@ -274,39 +320,106 @@ def adjust_player_points(
 
     source_ref = f"ADJUST-{uuid4()}"
 
+    # ── Resolver id_point_dimension desde el argumento recibido ─────────────────
+    # Prioridad: attribute_id > subattribute_id > dimension_code > point_dimension_id
+    resolved_pd_id: Optional[int] = None
+
+    if payload.attribute_id is not None:
+        row = db.execute(
+            text("SELECT id_point_dimension FROM point_dimension "
+                 "WHERE id_attributes = :v LIMIT 1"),
+            {"v": payload.attribute_id},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail={
+                "code":    "ATTRIBUTE_DIMENSION_NOT_FOUND",
+                "message": f"No existe dimensión de puntos para attribute_id={payload.attribute_id}.",
+                "hint":    "Consulta GET /admin/point-dimensions para ver las dimensiones disponibles.",
+            })
+        resolved_pd_id = row["id_point_dimension"]
+
+    elif payload.subattribute_id is not None:
+        row = db.execute(
+            text("SELECT id_point_dimension FROM point_dimension "
+                 "WHERE id_subattributes = :v LIMIT 1"),
+            {"v": payload.subattribute_id},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail={
+                "code":    "SUBATTRIBUTE_DIMENSION_NOT_FOUND",
+                "message": f"No existe dimensión de puntos para subattribute_id={payload.subattribute_id}.",
+                "hint":    "Consulta GET /admin/point-dimensions para ver las dimensiones disponibles.",
+            })
+        resolved_pd_id = row["id_point_dimension"]
+
+    elif payload.dimension_code is not None:
+        row = db.execute(
+            text("SELECT id_point_dimension FROM point_dimension "
+                 "WHERE code = :v LIMIT 1"),
+            {"v": payload.dimension_code},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail={
+                "code":    "DIMENSION_CODE_NOT_FOUND",
+                "message": f"No existe dimensión con code='{payload.dimension_code}'.",
+                "hint":    "Códigos válidos: SOCIAL_BASE, FISICO_BASE, AFECTIVO_BASE, MENTAL_BASE, CONDICION_FISICA, REG_EMOCIONAL",
+            })
+        resolved_pd_id = row["id_point_dimension"]
+
+    elif payload.point_dimension_id is not None:
+        row = db.execute(
+            text("SELECT id_point_dimension FROM point_dimension "
+                 "WHERE id_point_dimension = :v LIMIT 1"),
+            {"v": payload.point_dimension_id},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail={
+                "code":    "POINT_DIMENSION_NOT_FOUND",
+                "message": f"No existe id_point_dimension={payload.point_dimension_id}.",
+                "hint":    "Usa attribute_id en su lugar (attribute_id=2 para Físico, etc.).",
+            })
+        resolved_pd_id = payload.point_dimension_id
+
+    else:
+        raise HTTPException(status_code=422, detail={
+            "code":    "DIMENSION_REQUIRED",
+            "message": "Debes indicar la dimensión: attribute_id, subattribute_id, dimension_code o point_dimension_id.",
+            "ejemplo": {"attribute_id": 2, "direction": "CREDIT", "amount": 50,
+                        "reason": "Puntos por actividad física"},
+        })
+
+    # ── Info de la dimensión para enriquecer la respuesta ───────────────────────
+    dim = db.execute(
+        text("""
+            SELECT pd.code, pd.name AS dimension_name,
+                   a.name AS attribute_name, s.name AS subattribute_name
+            FROM point_dimension pd
+            LEFT JOIN attributes   a ON a.id_attributes   = pd.id_attributes
+            LEFT JOIN subattributes s ON s.id_subattributes = pd.id_subattributes
+            WHERE pd.id_point_dimension = :pd_id
+        """),
+        {"pd_id": resolved_pd_id},
+    ).mappings().first()
+
     try:
         db.execute(
-            text(
-                """
+            text("""
                 INSERT INTO points_ledger (
-                  id_players,
-                  id_point_dimension,
-                  id_videogame,
-                  direction,
-                  amount,
-                  source_type,
-                  source_ref,
-                  payload
+                  id_players, id_point_dimension, id_videogame,
+                  direction, amount, source_type, source_ref, payload
                 ) VALUES (
-                  :id_players,
-                  :id_point_dimension,
-                  :id_videogame,
-                  :direction,
-                  :amount,
-                  'ADJUST',
-                  :source_ref,
-                  :payload
+                  :id_players, :id_point_dimension, :id_videogame,
+                  :direction, :amount, 'ADJUST', :source_ref, :payload
                 )
-                """
-            ),
+            """),
             {
-                "id_players": player_id,
-                "id_point_dimension": payload.point_dimension_id,
-                "id_videogame": payload.videogame_id,
-                "direction": payload.direction,
-                "amount": payload.amount,
-                "source_ref": source_ref,
-                "payload": json.dumps({"reason": payload.reason}) if payload.reason else None,
+                "id_players":         player_id,
+                "id_point_dimension": resolved_pd_id,
+                "id_videogame":       payload.videogame_id,
+                "direction":          payload.direction,
+                "amount":             payload.amount,
+                "source_ref":         source_ref,
+                "payload":            json.dumps({"reason": payload.reason}) if payload.reason else None,
             },
         )
         db.commit()
@@ -314,4 +427,13 @@ def adjust_player_points(
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error adjusting points: {e}")
 
-    return {"status": "ok", "source_ref": source_ref}
+    return {
+        "status":             "ok",
+        "source_ref":         source_ref,
+        "id_point_dimension": resolved_pd_id,
+        "dimension_code":     dim["code"]            if dim else None,
+        "dimension_name":     dim["dimension_name"]  if dim else None,
+        "attribute_name":     dim["attribute_name"]  if dim else None,
+        "direction":          payload.direction,
+        "amount":             payload.amount,
+    }
