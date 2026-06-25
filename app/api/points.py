@@ -416,6 +416,7 @@ def adjust_player_points(
     attribute_id=2 ->  FISICO_BASE      (Puntos de actividad física)
     attribute_id=3 ->  AFECTIVO_BASE    (Puntos de bienestar afectivo)
     attribute_id=4 ->  MENTAL_BASE      (Puntos de desarrollo mental)
+    attribute_id=5 ->  LINGUISTICO_BASE (Puntos de desarrollo lingüístico)
     subattribute_id=6 ->  CONDICION_FISICA  (Condición física, subatributo de Físico)
     subattribute_id=11 -> REG_EMOCIONAL     (Regulación emocional, subatributo de Afectivo)
     ```
