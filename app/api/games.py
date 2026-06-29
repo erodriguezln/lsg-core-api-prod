@@ -91,6 +91,53 @@ def _get_player_global_dimension_balance(
     return int(row["balance"]) if row and row["balance"] is not None else 0
 
 
+def _resolve_redeem_dimension(db: Session, payload: "RedeemRequest") -> int:
+    """
+    Resuelve id_point_dimension para el canje.
+    Los puntos siempre van a la dimensión BASE — no se aceptan subdimensiones.
+    Prioridad: attribute_id > point_dimension_id.
+    """
+    if payload.attribute_id is not None:
+        row = db.execute(
+            text("SELECT id_point_dimension FROM point_dimension "
+                 "WHERE id_attributes = :v AND id_subattributes IS NULL LIMIT 1"),
+            {"v": payload.attribute_id},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail={
+                "code":    "ATTRIBUTE_DIMENSION_NOT_FOUND",
+                "message": f"No existe dimensión BASE para attribute_id={payload.attribute_id}.",
+                "hint":    "Consulta GET /admin/point-dimensions.",
+            })
+        return row["id_point_dimension"]
+
+    elif payload.point_dimension_id is not None:
+        row = db.execute(
+            text("SELECT id_point_dimension, id_subattributes FROM point_dimension "
+                 "WHERE id_point_dimension = :v LIMIT 1"),
+            {"v": payload.point_dimension_id},
+        ).mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail={
+                "code":    "POINT_DIMENSION_NOT_FOUND",
+                "message": f"No existe id_point_dimension={payload.point_dimension_id}.",
+            })
+        if row["id_subattributes"] is not None:
+            raise HTTPException(status_code=400, detail={
+                "code":    "SUBATTRIBUTE_DIMENSION_NOT_ALLOWED",
+                "message": f"id_point_dimension={payload.point_dimension_id} es de subatributo. Los canjes usan la dimensión BASE.",
+                "hint":    "Usa attribute_id (ej: attribute_id=2 para FISICO_BASE).",
+            })
+        return payload.point_dimension_id
+
+    else:
+        raise HTTPException(status_code=422, detail={
+            "code":    "DIMENSION_REQUIRED",
+            "message": "Indica la dimensión: attribute_id o point_dimension_id (solo BASE).",
+            "ejemplo": {"attribute_id": 2, "amount": 50, "modifiable_mechanic_videogame_id": 9},
+        })
+
+
 def _assert_mmv_exists_for_game(db: Session, game_id: int, mmv_id: int) -> None:
     """
     Valida que el id_modifiable_mechanic_videogame exista y pertenezca al juego del path.
@@ -365,10 +412,12 @@ def preview_redeem_mechanic(
     """
     _assert_mmv_exists_for_game(db, game_id, payload.modifiable_mechanic_videogame_id)
 
+    resolved_pd_id = _resolve_redeem_dimension(db, payload)
+
     current_balance = _get_player_global_dimension_balance(
         db=db,
         player_id=player_id,
-        point_dimension_id=payload.point_dimension_id,
+        point_dimension_id=resolved_pd_id,
         for_update=False,
     )
 
@@ -382,7 +431,7 @@ def preview_redeem_mechanic(
         "resulting_balance": new_balance,
         "game_id": game_id,
         "player_id": player_id,
-        "point_dimension_id": payload.point_dimension_id,
+        "id_point_dimension": resolved_pd_id,
         "modifiable_mechanic_videogame_id": payload.modifiable_mechanic_videogame_id,
     }
 
@@ -400,13 +449,16 @@ def redeem_mechanic(
     **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     from uuid import uuid4
+    import json
 
     _assert_mmv_exists_for_game(db, game_id, payload.modifiable_mechanic_videogame_id)
+
+    resolved_pd_id = _resolve_redeem_dimension(db, payload)
 
     current_balance = _get_player_global_dimension_balance(
         db=db,
         player_id=player_id,
-        point_dimension_id=payload.point_dimension_id,
+        point_dimension_id=resolved_pd_id,
         for_update=True,
     )
 
@@ -420,7 +472,7 @@ def redeem_mechanic(
                 "required_amount": payload.amount,
                 "game_id": game_id,
                 "player_id": player_id,
-                "point_dimension_id": payload.point_dimension_id,
+                "id_point_dimension": resolved_pd_id,
             },
         )
 
@@ -442,7 +494,7 @@ def redeem_mechanic(
                 ),
                 {
                     "id_players": player_id,
-                    "id_point_dimension": payload.point_dimension_id,
+                    "id_point_dimension": resolved_pd_id,
                     "id_videogame": game_id,
                     "amount": payload.amount,
                     "source_ref": source_ref,
@@ -488,7 +540,7 @@ def redeem_mechanic(
               JSON_OBJECT('pl_id',:pl_id,'amount',:amt,'dimension',:dim,
                           'resulting_balance',:bal,'mmv_id',:mmv))
         """), {"pid": player_id, "gid": game_id, "pl_id": pl_id,
-               "amt": payload.amount, "dim": payload.point_dimension_id,
+               "amt": payload.amount, "dim": resolved_pd_id,
                "bal": resulting_balance, "mmv": payload.modifiable_mechanic_videogame_id})
         db.commit()
     except Exception:
@@ -503,7 +555,7 @@ def redeem_mechanic(
         "resulting_balance": resulting_balance,
         "game_id": game_id,
         "player_id": player_id,
-        "point_dimension_id": payload.point_dimension_id,
+        "id_point_dimension": resolved_pd_id,
         "modifiable_mechanic_videogame_id": payload.modifiable_mechanic_videogame_id,
     }
 

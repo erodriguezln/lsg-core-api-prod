@@ -24,6 +24,11 @@ class PointsAdjustRequest(BaseModel):
     """
     Cuerpo para POST /players/{id}/points/adjust.
 
+    **Regla fundamental:** los puntos SIEMPRE se acreditan al atributo base
+    (FISICO_BASE, MENTAL_BASE, etc.), nunca directamente a un subatributo.
+    Si se indica un subatributo, se usa solo como trazabilidad en el payload;
+    los puntos van al atributo padre correspondiente.
+
     Indica la dimensión usando **una** de estas opciones (prioridad: 1->2->3->4):
 
     | Campo               | Ejemplo          | Cuándo usar                              |
@@ -381,6 +386,7 @@ def get_points_ledger(
     return result
 
 
+
 @router.post("/players/{player_id}/points/adjust", tags=["points"], dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def adjust_player_points(
     player_id: int,
@@ -461,41 +467,96 @@ def adjust_player_points(
     **Roles disponibles:** "admin", "researcher", "developer"
     """
     from uuid import uuid4
-    import json
+    import json as _json
 
     source_ref = f"ADJUST-{uuid4()}"
 
-    # Resolver id_point_dimension desde el argumento recibido
-    # Prioridad: attribute_id > subattribute_id > dimension_code > point_dimension_id
+    # ── Helper: dado un id_point_dimension, verificar si es subatributo y
+    #    resolver al atributo padre. Devuelve (pd_id_final, subattr_meta).
+    def _resolve_to_base_dimension(pd_id: int):
+        """
+        Si la dimensión es de subatributo (id_attributes IS NULL), sube al
+        atributo padre y retorna la dimensión base correspondiente.
+        Los puntos SIEMPRE van al atributo base; el subatributo queda en el log.
+        """
+        dim = db.execute(
+            text("""
+                SELECT pd.id_point_dimension, pd.code, pd.id_attributes,
+                       pd.id_subattributes, s.name AS subattribute_name,
+                       s.attributes_id_attributes AS parent_attr_id
+                FROM point_dimension pd
+                LEFT JOIN subattributes s ON s.id_subattributes = pd.id_subattributes
+                WHERE pd.id_point_dimension = :pd_id
+            """),
+            {"pd_id": pd_id},
+        ).mappings().first()
+
+        if not dim:
+            return None, None
+
+        # Si ya es atributo base → devuelve directo
+        if dim["id_attributes"] is not None:
+            return pd_id, None
+
+        # Es subatributo → resolver al atributo padre
+        parent_pd = db.execute(
+            text("""
+                SELECT id_point_dimension, code
+                FROM point_dimension
+                WHERE id_attributes = :attr_id
+                  AND id_subattributes IS NULL
+                LIMIT 1
+            """),
+            {"attr_id": dim["parent_attr_id"]},
+        ).mappings().first()
+
+        if not parent_pd:
+            raise HTTPException(status_code=404, detail={
+                "code":    "PARENT_DIMENSION_NOT_FOUND",
+                "message": f"No se encontró dimensión base para el subatributo {dim['id_subattributes']}.",
+            })
+
+        # Meta del subatributo para trazabilidad en el payload
+        subattr_meta = {
+            "subattribute_id":   dim["id_subattributes"],
+            "subattribute_name": dim["subattribute_name"],
+            "subattribute_code": dim["code"],
+        }
+        return parent_pd["id_point_dimension"], subattr_meta
+
+    # ── Resolver id_point_dimension según el campo recibido ───────────────────
     resolved_pd_id: Optional[int] = None
+    subattr_meta = None
 
     if payload.attribute_id is not None:
         row = db.execute(
             text("SELECT id_point_dimension FROM point_dimension "
-                 "WHERE id_attributes = :v LIMIT 1"),
+                 "WHERE id_attributes = :v AND id_subattributes IS NULL LIMIT 1"),
             {"v": payload.attribute_id},
         ).mappings().first()
         if not row:
             raise HTTPException(status_code=404, detail={
                 "code":    "ATTRIBUTE_DIMENSION_NOT_FOUND",
-                "message": f"No existe dimensión de puntos para attribute_id={payload.attribute_id}.",
-                "hint":    "Consulta GET /admin/point-dimensions para ver las dimensiones disponibles.",
+                "message": f"No existe dimensión base para attribute_id={payload.attribute_id}.",
+                "hint":    "Consulta GET /admin/point-dimensions.",
             })
         resolved_pd_id = row["id_point_dimension"]
 
     elif payload.subattribute_id is not None:
-        row = db.execute(
+        # Primero encontrar la dimensión del subatributo
+        sub_pd = db.execute(
             text("SELECT id_point_dimension FROM point_dimension "
                  "WHERE id_subattributes = :v LIMIT 1"),
             {"v": payload.subattribute_id},
         ).mappings().first()
-        if not row:
+        if not sub_pd:
             raise HTTPException(status_code=404, detail={
                 "code":    "SUBATTRIBUTE_DIMENSION_NOT_FOUND",
-                "message": f"No existe dimensión de puntos para subattribute_id={payload.subattribute_id}.",
-                "hint":    "Consulta GET /admin/point-dimensions para ver las dimensiones disponibles.",
+                "message": f"No existe dimensión para subattribute_id={payload.subattribute_id}.",
+                "hint":    "Consulta GET /admin/point-dimensions.",
             })
-        resolved_pd_id = row["id_point_dimension"]
+        # Resolver al atributo base
+        resolved_pd_id, subattr_meta = _resolve_to_base_dimension(sub_pd["id_point_dimension"])
 
     elif payload.dimension_code is not None:
         row = db.execute(
@@ -507,9 +568,10 @@ def adjust_player_points(
             raise HTTPException(status_code=404, detail={
                 "code":    "DIMENSION_CODE_NOT_FOUND",
                 "message": f"No existe dimensión con code='{payload.dimension_code}'.",
-                "hint":    "Códigos válidos: SOCIAL_BASE, FISICO_BASE, AFECTIVO_BASE, MENTAL_BASE, CONDICION_FISICA, REG_EMOCIONAL",
+                "hint":    "Códigos base válidos: SOCIAL_BASE, FISICO_BASE, AFECTIVO_BASE, MENTAL_BASE.",
             })
-        resolved_pd_id = row["id_point_dimension"]
+        # Si el código apunta a un subatributo, resolver al padre
+        resolved_pd_id, subattr_meta = _resolve_to_base_dimension(row["id_point_dimension"])
 
     elif payload.point_dimension_id is not None:
         row = db.execute(
@@ -521,30 +583,34 @@ def adjust_player_points(
             raise HTTPException(status_code=404, detail={
                 "code":    "POINT_DIMENSION_NOT_FOUND",
                 "message": f"No existe id_point_dimension={payload.point_dimension_id}.",
-                "hint":    "Usa attribute_id en su lugar (attribute_id=2 para Físico, etc.).",
             })
-        resolved_pd_id = payload.point_dimension_id
+        resolved_pd_id, subattr_meta = _resolve_to_base_dimension(payload.point_dimension_id)
 
     else:
         raise HTTPException(status_code=422, detail={
             "code":    "DIMENSION_REQUIRED",
-            "message": "Debes indicar la dimensión: attribute_id, subattribute_id, dimension_code o point_dimension_id.",
+            "message": "Debes indicar: attribute_id, subattribute_id, dimension_code o point_dimension_id.",
             "ejemplo": {"attribute_id": 2, "direction": "CREDIT", "amount": 50,
-                        "reason": "Puntos por actividad física"},
+                        "reason": "meta_hidratacion"},
         })
 
-    # Info de la dimensión para enriquecer la respuesta
-    dim = db.execute(
+    # ── Info de la dimensión base (para response) ──────────────────────────────
+    dim_info = db.execute(
         text("""
-            SELECT pd.code, pd.name AS dimension_name,
-                   a.name AS attribute_name, s.name AS subattribute_name
+            SELECT pd.code, pd.name AS dimension_name, a.name AS attribute_name
             FROM point_dimension pd
-            LEFT JOIN attributes   a ON a.id_attributes   = pd.id_attributes
-            LEFT JOIN subattributes s ON s.id_subattributes = pd.id_subattributes
+            LEFT JOIN attributes a ON a.id_attributes = pd.id_attributes
             WHERE pd.id_point_dimension = :pd_id
         """),
         {"pd_id": resolved_pd_id},
     ).mappings().first()
+
+    # ── Construir payload: reason + trazabilidad de subatributo si aplica ──────
+    ledger_payload: dict = {}
+    if payload.reason:
+        ledger_payload["reason"] = payload.reason
+    if subattr_meta:
+        ledger_payload["subattribute_trace"] = subattr_meta
 
     try:
         db.execute(
@@ -564,7 +630,7 @@ def adjust_player_points(
                 "direction":          payload.direction,
                 "amount":             payload.amount,
                 "source_ref":         source_ref,
-                "payload":            json.dumps({"reason": payload.reason}) if payload.reason else None,
+                "payload":            _json.dumps(ledger_payload) if ledger_payload else None,
             },
         )
         db.commit()
@@ -572,13 +638,16 @@ def adjust_player_points(
         db.rollback()
         raise HTTPException(status_code=400, detail=f"Error adjusting points: {e}")
 
-    return {
+    response = {
         "status":             "ok",
         "source_ref":         source_ref,
         "id_point_dimension": resolved_pd_id,
-        "dimension_code":     dim["code"]            if dim else None,
-        "dimension_name":     dim["dimension_name"]  if dim else None,
-        "attribute_name":     dim["attribute_name"]  if dim else None,
+        "dimension_code":     dim_info["code"]           if dim_info else None,
+        "dimension_name":     dim_info["dimension_name"] if dim_info else None,
+        "attribute_name":     dim_info["attribute_name"] if dim_info else None,
         "direction":          payload.direction,
         "amount":             payload.amount,
     }
+    if subattr_meta:
+        response["subattribute_trace"] = subattr_meta
+    return response
