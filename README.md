@@ -250,6 +250,12 @@ curl https://lsg.diinf.usach.cl/lsg-core-api/health/full
 
 ## Changelog
 
+### v1.2.5.1 (2026-06-30)
+
+**Bugfixes:**
+    - **`points.py`** - Se corrigió un error en el endpoint `GET /players/{player_id}/points/balance` y `GET /players/{player_id}/attributes/points` ya que estaba visualizando los puntos por subdimensión/subatributo, en vez de la dimensión/atributo.
+    - **`games.py`** - Se corrigió un error en el endpoint `POST /videogames/{game_id}/players/{player_id}/redeem/preview` y `POST /videogames/{game_id}/players/{player_id}/redeem` que no permitía canjear, ya que estaba considerando los puntos por subdimensión/subatributo y no por dimensión/atributo.
+
 ### v1.2.5 (2026-06-25)
 
 **Bugfixes:**
