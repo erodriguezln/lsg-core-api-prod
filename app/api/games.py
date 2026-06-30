@@ -495,7 +495,7 @@ def redeem_mechanic(
                 ),
                 {
                     "id_players": player_id,
-                    "point_dimension_id": resolved_pd_id,
+                    "id_point_dimension": resolved_pd_id,
                     "id_videogame": game_id,
                     "amount": payload.amount,
                     "source_ref": source_ref,
