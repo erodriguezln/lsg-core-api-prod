@@ -23,7 +23,8 @@ router = APIRouter()
 
 class RedeemRequest(BaseModel):
     modifiable_mechanic_videogame_id: int
-    point_dimension_id: int
+    point_dimension_id: Optional[int] = None
+    attribute_id: Optional[int] = None
     amount: int
     metadata: Optional[dict] = None
 
