@@ -353,6 +353,106 @@ def create_videogame(
     return dict(row)
 
 
+@router.put(
+    "/{game_id}",
+    dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))],
+)
+def update_videogame(
+    game_id: int,
+    payload: VideogameUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    # PUT /videogames/{game_id}
+
+    Actualiza parcialmente los datos de un videojuego.
+    Solo se modifican los campos enviados en el body; los campos ausentes
+    o `null` se ignoran (semántica PATCH sobre PUT).
+
+    **Roles disponibles:** "admin", "researcher", "developer"
+
+    **cURL de ejemplo:**
+    ```bash
+    curl -X PUT 'https://lsg.diinf.usach.cl/lsg-core-api/videogames/54' \\
+      -H 'Authorization: Bearer <TOKEN>' \\
+      -H 'Content-Type: application/json' \\
+      -d '{
+        "version": "1.1",
+        "description": "Descripción actualizada",
+        "executable": "CyberSwipe.exe"
+      }'
+    ```
+    """
+    # 1. Verificar existencia
+    exists = db.execute(
+        text("SELECT id_videogame FROM videogame WHERE id_videogame = :id"),
+        {"id": game_id},
+    ).mappings().first()
+    if not exists:
+        raise HTTPException(status_code=404, detail="Videogame not found")
+
+    # 2. Construir SET dinámico — solo campos no-None del payload
+    fields = []
+    params: dict = {"id": game_id}
+
+    field_map = {
+        "name":        payload.name,
+        "genre":       payload.genre,
+        "description": payload.description,
+        "engine":      payload.engine,
+        "developer":   payload.developer,
+        "publisher":   payload.publisher,
+        "launch":      payload.launch,
+        "version":     payload.version,
+        "type":        payload.type,
+        "executable":  payload.executable,
+    }
+
+    for col, val in field_map.items():
+        if val is not None:
+            fields.append(f"{col} = :{col}")
+            params[col] = val
+
+    # 3. Si no se envió ningún campo, devolver el registro sin tocar la BD
+    if not fields:
+        return get_videogame(game_id, db)
+
+    # 4. Conflicto de nombre único (solo si name cambia)
+    if payload.name is not None:
+        duplicate = db.execute(
+            text(
+                """
+                SELECT id_videogame FROM videogame
+                WHERE LOWER(name) = LOWER(:name)
+                  AND id_videogame != :id
+                LIMIT 1
+                """
+            ),
+            {"name": payload.name, "id": game_id},
+        ).mappings().first()
+        if duplicate:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code":        "VIDEOGAME_NAME_CONFLICT",
+                    "message":     "Ya existe otro videojuego con ese nombre.",
+                    "id_videogame": duplicate["id_videogame"],
+                    "name":        payload.name,
+                },
+            )
+
+    # 5. Ejecutar UPDATE
+    sql = "UPDATE videogame SET " + ", ".join(fields) + " WHERE id_videogame = :id"
+    try:
+        db.execute(text(sql), params)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error updating videogame: {e}")
+
+    return get_videogame(game_id, db)
+
+
 @router.get("/{game_id}/mechanics", dependencies=[Depends(require_roles(ROLE_ALL))])
 def get_videogame_mechanics(
     game_id: int,
