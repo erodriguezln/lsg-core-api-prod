@@ -432,7 +432,7 @@ def preview_redeem_mechanic(
         "resulting_balance": new_balance,
         "game_id": game_id,
         "player_id": player_id,
-        "id_point_dimension": resolved_pd_id,
+        "point_dimension_id": resolved_pd_id,
         "modifiable_mechanic_videogame_id": payload.modifiable_mechanic_videogame_id,
     }
 
@@ -473,7 +473,7 @@ def redeem_mechanic(
                 "required_amount": payload.amount,
                 "game_id": game_id,
                 "player_id": player_id,
-                "id_point_dimension": resolved_pd_id,
+                "point_dimension_id": resolved_pd_id,
             },
         )
 
@@ -495,7 +495,7 @@ def redeem_mechanic(
                 ),
                 {
                     "id_players": player_id,
-                    "id_point_dimension": resolved_pd_id,
+                    "point_dimension_id": resolved_pd_id,
                     "id_videogame": game_id,
                     "amount": payload.amount,
                     "source_ref": source_ref,
@@ -556,7 +556,7 @@ def redeem_mechanic(
         "resulting_balance": resulting_balance,
         "game_id": game_id,
         "player_id": player_id,
-        "id_point_dimension": resolved_pd_id,
+        "point_dimension_id": resolved_pd_id,
         "modifiable_mechanic_videogame_id": payload.modifiable_mechanic_videogame_id,
     }
 
