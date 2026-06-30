@@ -253,6 +253,20 @@ class VideogameCreateRequest(BaseModel):
     executable: Optional[str] = None
 
 
+class VideogameUpdateRequest(BaseModel):
+    id_videogame: Optional[int] = None
+    name: Optional[str] = None
+    genre: Optional[str] = None
+    description: Optional[str] = None
+    engine: Optional[str] = None
+    developer: Optional[str] = None
+    publisher: Optional[str] = None
+    launch: Optional[str] = None
+    version: Optional[str] = None
+    type: Optional[str] = None
+    executable: Optional[str] = None
+
+
 @router.post("", status_code=201, dependencies=[Depends(require_roles(["admin", "researcher", "developer"]))])
 def create_videogame(
     payload: VideogameCreateRequest,
