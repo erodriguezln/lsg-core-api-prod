@@ -11,7 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.security import CurrentUser, get_current_user
+from app.security import CurrentUser, get_current_user, require_roles, ROLE_ALL
 
 router = APIRouter()
 
@@ -98,7 +98,7 @@ def _validate_event_timing(event: OfflineEvent) -> Optional[str]:
 def sync_offline_events(
     body: OfflineSyncRequest,
     db: Session = Depends(get_db),
-    current: CurrentUser = Depends(get_current_user),
+    current: CurrentUser = Depends(require_roles(ROLE_ALL)),
 ):
     """
     # POST /offline/sync
@@ -111,7 +111,7 @@ def sync_offline_events(
     - **DUPLICATE**: `client_ref` ya existe en la cola (idempotente).
     - **REJECTED**: evento inválido (fuera de ventana, monto excedido, etc.).
 
-    **Roles disponibles:** "admin"
+    **Roles disponibles:** "admin", "researcher", "teacher", "player", "developer"
     """
     elevated = {"admin"}
     if not any(r in elevated for r in current.roles):
